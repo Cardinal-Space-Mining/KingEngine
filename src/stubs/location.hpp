@@ -20,7 +20,7 @@ namespace location_system
     {
         void cleanup();
 
-        constexpr const char *SHM_NAME = "LOCATION_SHM";
+        constexpr const char *SHM_NAME = "/LOCATION_SHM";
         constexpr std::size_t SHM_SIZE = sizeof(KingEngine::locationI_t);
     } // namespace internals
 

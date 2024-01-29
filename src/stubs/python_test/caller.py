@@ -6,8 +6,11 @@ from localization_stub import LocationSystem
 
 
 if __name__ == "__main__":
-    sys = LocationSystem()
+    lsys = LocationSystem()
     while True:
         x = float(input("\nGive X: "))
-        y = float(input("\nGive X: "))
-        sys.set_robot_location(x,y)
+        y = float(input("\nGive Y: "))
+        if x == 0 and y == 0:
+            del lsys
+            exit()
+        lsys.set_robot_location(x,y)
