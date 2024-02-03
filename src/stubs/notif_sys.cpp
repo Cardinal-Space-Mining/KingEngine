@@ -66,7 +66,7 @@ ftruncate_again:
         std::exit(EXIT_FAILURE);
     };
 
-    void *shared_ptr = (void *)mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    void *shared_ptr = mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (shared_ptr == MAP_FAILED)
     {
         std::perror("mmap in recalc_notif_sys::init");
@@ -99,7 +99,7 @@ void recalc_notif_sys::join()
         std::exit(EXIT_FAILURE);
     }
 
-    void *shared_ptr = (void *)mmap(NULL, recalc_notif_sys::internals::SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    void *shared_ptr = mmap(NULL, recalc_notif_sys::internals::SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (shared_ptr == MAP_FAILED)
     {
         std::perror("mmap in recalc_notif_sys::join");
@@ -199,7 +199,7 @@ void recalc_notif_sys::internals::unsubscribe_self()
 
 void recalc_notif_sys::internals::subscribe()
 {
-    struct sigaction newact = {0};
+    struct sigaction newact = {};
 
     newact.sa_handler = event_hdlr_shim;
 

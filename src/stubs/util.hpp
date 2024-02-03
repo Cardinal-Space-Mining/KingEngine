@@ -17,7 +17,7 @@ namespace ctrl_c_patch
 
     inline void patch()
     {
-        struct sigaction newact = {0};
+        struct sigaction newact = {};
 
         newact.sa_handler = patch_hdlr;
 

@@ -117,7 +117,7 @@ ftruncate_again:
 
     DST_DATA_PTR = reinterpret_cast<KingEngine::locationI_t *>(shared_ptr);
 
-    locationF_t empty = {0};
+    locationF_t empty = {};
 
     destination_system::set_destination(empty);
 }
