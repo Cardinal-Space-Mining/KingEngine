@@ -11,6 +11,7 @@
 #include <sys/stat.h> /* For mode constants */
 #include <fcntl.h>    /* For O_* constants */
 #include <unistd.h>   // for close
+#include <errno.h>
 
 using namespace location_system;
 
@@ -77,9 +78,15 @@ void location_system::init()
         std::exit(EXIT_FAILURE);
     }
 
+ftruncate_again:
     if (ftruncate(shm_fd, location_system::internals::SHM_SIZE) != 0)
     {
-        std::perror("ftruncate failed in location_system::init");
+        if (errno == EINTR)
+        {
+            goto ftruncate_again;
+        }
+
+        std::perror("ftruncate failed in destination_system::init");
         location_system::internals::cleanup();
         std::exit(EXIT_FAILURE);
     }

@@ -21,7 +21,7 @@ namespace recalc_notif_sys
     // Suscribes to notifications and sets a handler to be run everytime the system is notified. Calling this requires initializing the destination system.
     void set_event_handler(std::function<void(locationF_t)> func);
 
-    //Internals. 
+    // Internals.
     namespace internals
     {
         typedef struct notif_backer

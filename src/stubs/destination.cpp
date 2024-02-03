@@ -11,6 +11,7 @@
 #include <sys/stat.h> /* For mode constants */
 #include <fcntl.h>    /* For O_* constants */
 #include <unistd.h>   // for close
+#include <errno.h>
 
 using namespace destination_system;
 
@@ -77,8 +78,14 @@ void destination_system::init()
         std::exit(EXIT_FAILURE);
     }
 
+ftruncate_again:
     if (ftruncate(shm_fd, destination_system::internals::SHM_SIZE) != 0)
     {
+        if (errno == EINTR)
+        {
+            goto ftruncate_again;
+        }
+
         std::perror("ftruncate failed in destination_system::init");
         destination_system::internals::cleanup();
         std::exit(EXIT_FAILURE);

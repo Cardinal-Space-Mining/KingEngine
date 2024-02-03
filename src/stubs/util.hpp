@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <cstdio>
 
-//This changes the signal handler for ctrl-c to terminate the process normally instead of abnormally. This results in atexit functions being called and cleanup taking place.
+// This changes the signal handler for ctrl-c to terminate the process normally instead of abnormally. This results in atexit functions being called and cleanup taking place.
 namespace ctrl_c_patch
 {
     inline void patch_hdlr(int signal)
@@ -11,7 +11,7 @@ namespace ctrl_c_patch
         if (signal == SIGINT)
         {
             std::exit(EXIT_FAILURE);
-            _exit(EXIT_FAILURE); //std::exit is not gurenteed to work in a signal handler. Sadness 
+            _exit(EXIT_FAILURE); // std::exit is not gurenteed to work in a signal handler. Sadness
         }
     }
 

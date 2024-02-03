@@ -20,12 +20,12 @@ void recalc_notif_sys::internals::notif_sys_cleanup()
 {
     if (sem_destroy(&backing_struct->notif_sem) != 0)
     {
-        perror("sem_destroy errored in notif_sys_cleanup");
+        perror("sem_destroy errored in recalc_notif_sys::internals::notif_sys_cleanup");
     }
 
     if (shm_unlink(recalc_notif_sys::internals::SHM_NAME) != 0)
     {
-        perror("shm_unlink errored in notif_sys_cleanup");
+        perror("shm_unlink errored in recalc_notif_sys::internals::notif_sys_cleanup");
     }
 }
 
@@ -44,10 +44,16 @@ void recalc_notif_sys::init()
         std::exit(EXIT_FAILURE);
     }
 
+ftruncate_again:
     if (ftruncate(shm_fd, SHM_SIZE) != 0)
     {
-        notif_sys_cleanup();
-        std::perror("ftruncate in recalc_notif_sys::init");
+        if (errno == EINTR)
+        {
+            goto ftruncate_again;
+        }
+
+        std::perror("ftruncate failed in recalc_notif_sys::init");
+        destination_system::internals::cleanup();
         std::exit(EXIT_FAILURE);
     }
 
@@ -79,7 +85,7 @@ void recalc_notif_sys::init()
 
     if (close(shm_fd) != 0)
     {
-        std::perror("Close in recalc_notif_sys::init");
+        std::perror("close in recalc_notif_sys::init");
         std::exit(EXIT_FAILURE);
     };
 }
@@ -122,7 +128,6 @@ std::function<void(locationF_t)> fn = [](locationF_t)
 
 void recalc_notif_sys::internals::event_hdlr_shim(int i)
 {
-    std::printf("Calling Shim");
     if (i == SIGUSR1)
     {
         auto dst = destination_system::get_destination();
@@ -132,9 +137,15 @@ void recalc_notif_sys::internals::event_hdlr_shim(int i)
 
 void recalc_notif_sys::internals::join_process_list()
 {
+sem_wait_again:
     if (sem_wait(&backing_struct->notif_sem) != 0)
     {
-        std::perror("join_process_list in recalc_notif_sys.cpp::join_process_list");
+        if (errno == EAGAIN || errno == EINTR)
+        {
+            goto sem_wait_again;
+        }
+
+        std::perror("sem_wait in recalc_notif_sys::internals::join_process_list");
         std::exit(EXIT_FAILURE);
     }
 
@@ -146,19 +157,24 @@ void recalc_notif_sys::internals::join_process_list()
 
     if (sem_post(&backing_struct->notif_sem) != 0)
     {
-        std::perror("sem_post in recalc_notif_sys.cpp::join_process_list");
+        std::perror("sem_post in recalc_notif_sys::internals::join_process_list");
         std::exit(EXIT_FAILURE);
     }
 }
 
 void recalc_notif_sys::internals::unsubscribe(pid_t pid)
 {
+sem_wait_again:
     if (sem_wait(&backing_struct->notif_sem) != 0)
     {
-        std::perror("sem_wait in recalc_notif_sys.cpp::unsubscribe");
+        if (errno == EAGAIN || errno == EINTR)
+        {
+            goto sem_wait_again;
+        }
+
+        std::perror("sem_wait in recalc_notif_sys::internals::unsubscribe");
         std::exit(EXIT_FAILURE);
     }
-
     for (size_t i = 0; i < backing_struct->num_processes; i++)
     {
         if (backing_struct->processes[i] == pid)
@@ -170,7 +186,7 @@ void recalc_notif_sys::internals::unsubscribe(pid_t pid)
 
     if (sem_post(&backing_struct->notif_sem) != 0)
     {
-        std::perror("sem_post in recalc_notif_sys.cpp::unsubscribe");
+        std::perror("sem_post in recalc_notif_sys::internals::unsubscribe");
         std::exit(EXIT_FAILURE);
     }
 }
@@ -246,7 +262,8 @@ void recalc_notif_sys::internals::raise_signal(int signal)
 
     if (sem_post(&backing_struct->notif_sem) != 0)
     {
-        std::perror("sem_wait in recalc_notif_sys::notify");
+        auto errmsg = "sem_post in recalc_notif_sys::internals::raise_signal";
+        std::perror(errmsg);
         std::exit(EXIT_FAILURE);
     }
 }
