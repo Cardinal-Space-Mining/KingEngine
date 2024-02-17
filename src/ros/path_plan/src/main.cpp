@@ -5,6 +5,6 @@ int main(int argc, char ** argv)
   (void) argc;
   (void) argv;
 
-  printf("hello world monolith package\n");
+  printf("hello world path_plan package\n");
   return 0;
 }

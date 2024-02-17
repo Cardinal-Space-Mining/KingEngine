@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 
-from king_engine.msg import Location                           
+from custom_types.msg import Location                           
 import time
 
 class MinimalPublisher(Node):

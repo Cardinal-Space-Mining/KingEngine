@@ -4,7 +4,7 @@
 #include <string>
 
 #include "rclcpp/rclcpp.hpp"
-#include "king_engine/msg/location.hpp"
+#include "custom_types/msg/location.hpp"
 
 
 using namespace std::chrono_literals;
@@ -19,17 +19,17 @@ class LocationSubscriber : public rclcpp::Node
     LocationSubscriber()
     : Node("king_engine")
     {
-      publisher_ = this->create_subscription<king_engine::msg::Location>("location", 10, std::bind(&LocationSubscriber::topic_callback, this, _1));
+      publisher_ = this->create_subscription<custom_types::msg::Location>("location", 10, std::bind(&LocationSubscriber::topic_callback, this, _1));
     }
 
   private:
-    void topic_callback(const king_engine::msg::Location& msg)
+    void topic_callback(const custom_types::msg::Location& msg)
     {
 
       RCLCPP_INFO(this->get_logger(), "Recieved location: (%F, %F)", msg.x, msg.y);
 
     }
-    rclcpp::Subscription<king_engine::msg::Location>::SharedPtr publisher_;
+    rclcpp::Subscription<custom_types::msg::Location>::SharedPtr publisher_;
 };
 
 int main(int argc, char * argv[])
