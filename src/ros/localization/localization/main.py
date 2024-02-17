@@ -30,7 +30,7 @@ def main(args=None):
 
     # Hand the main thread off to localization
     try:
-        localization_main(lambda: publish_location)
+        localization_main(publish_location)
     finally:
         loc_publisher.destroy()
         loc_node.destroy_node()
