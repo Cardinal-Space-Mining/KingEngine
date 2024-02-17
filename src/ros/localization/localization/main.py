@@ -4,7 +4,7 @@ from rclpy.node import Node
 from threading import Thread
 from rclpy import qos
 from rclpy.executors import MultiThreadedExecutor
-from localization_main import localization_main
+from localization.localization_main import localization_main
 from custom_types.msg import Location                           
 import time
 
@@ -18,7 +18,8 @@ def main(args=None):
 
     loc_publisher = loc_node.create_publisher(Location, 'location', 10) 
 
-    thd = Thread(lambda: executor.spin)
+    thd = Thread(target=lambda: executor.spin)
+    thd.start()
 
     def publish_location(x: float, y: float) -> None:
         msg = Location()                                                
@@ -33,7 +34,7 @@ def main(args=None):
     finally:
         loc_publisher.destroy()
         loc_node.destroy_node()
-        thd.join()
+        thd.join(0.1)
         rclpy.shutdown()
     
 

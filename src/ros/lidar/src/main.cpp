@@ -53,6 +53,7 @@ void ros_bridge::set_map(std::vector<double> &l)
   if (!node)
   {
     std::fprintf(stderr, "%s", "update_destination called before initialization");
+    return;
   }
 
   // Assemble message
@@ -74,7 +75,9 @@ int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
   // TODO Spawn Sam Lidar System
-  rclcpp::spin(std::make_shared<LidarNode>());
+  node = std::make_shared<LidarNode>();
+  rclcpp::spin(node);
+  node = nullptr;
   rclcpp::shutdown();
   return 0;
 }

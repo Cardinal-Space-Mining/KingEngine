@@ -50,6 +50,7 @@ void ros_bridge::set_destination(Location l){
   if (!node)
   {
     std::fprintf(stderr, "%s", "update_destination called before initialization");
+    return;
   }
   
   //Assemble message
@@ -74,6 +75,7 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);
   node = std::make_shared<KingEngineNode>();
   rclcpp::spin(node);
+  node = nullptr;
   rclcpp::shutdown();
   return 0;
 }
