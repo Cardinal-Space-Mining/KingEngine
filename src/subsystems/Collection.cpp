@@ -1,5 +1,7 @@
-
-
+#include <vector>
+#include <numeric>
+#include "Collection.h"
+#include "subsystem_util.h"
 // This class is for the mining segment
 // Sets a speed
 // Starts based on Hopper position
@@ -9,12 +11,32 @@
 
 // imports
 
-class Collection {
-    private:
-        double trencherEncoder = 0;
-        double trencherSpeed = 0;
-        double trencherCurrent = 0;
-        double trencherVoltage = 0;
-        double busVoltage = 0;
-};
-// trench variables
+
+void periodic() {
+    
+}
+
+bool getTrencherJammed() {
+    return trencherIsJammed;
+}
+
+void setTrencherJammed(boolean status) {
+    trencherIsJammed = status;
+}
+
+double getTrencherEncoder() {
+    return trencherEncoder;
+}
+
+double getTrencherVelocity() {
+    return trencherSpeed;
+}
+
+double getTrencherCurrent() {
+    return trencherCurrent;
+}
+
+double getTrencherAvgCurrent() {
+    return trench_avg_current;
+}
+
