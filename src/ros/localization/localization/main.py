@@ -1,48 +1,42 @@
 import rclpy
 from rclpy.node import Node
 
+from threading import Thread
+from rclpy import qos
+from rclpy.executors import MultiThreadedExecutor
+from localization_main import localization_main
 from custom_types.msg import Location                           
 import time
-
-class MinimalPublisher(Node):
-    x: int
-    y: int
-
-    def __init__(self):
-        super().__init__('localization')
-        self.publisher_ = self.create_publisher(Location, 'location', 10) 
-        timer_period = 0.5
-        self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.x = 0
-        self.y = 0
-
-    def timer_callback(self):
-        msg = Location()                                                
-        msg.x = float(self.x)
-        msg.y = float(self.y)                                          
-        self.publisher_.publish(msg)
-        self.get_logger().info(f'Publishing: ({msg.x}, {msg.y})')     
-        self.x = self.x + 1
-        self.y = self.y + 1  
-
-
 
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_publisher = MinimalPublisher()
+    executor = MultiThreadedExecutor()
 
-    #rclpy.spin(minimal_publisher)
+    loc_node = Node('localization')
+    executor.add_node(loc_node)
 
-    for i in range(0,122):
+    loc_publisher = loc_node.create_publisher(Location, 'location', 10) 
+
+    thd = Thread(lambda: executor.spin)
+
+    def publish_location(x: float, y: float) -> None:
         msg = Location()                                                
-        msg.x = float(i)
-        msg.y = float(932)
-        minimal_publisher.publisher_.publish(msg)
-        time.sleep(2)
+        msg.x = float(x)
+        msg.y = float(y)                                          
+        loc_publisher.publish(msg)
+        loc_node.get_logger().info(f'Publishing: ({msg.x}, {msg.y})')  
 
-    minimal_publisher.destroy_node()
-    rclpy.shutdown()
+    # Hand the main thread off to localization
+    try:
+        localization_main(lambda: publish_location)
+    finally:
+        loc_publisher.destroy()
+        loc_node.destroy_node()
+        thd.join()
+        rclpy.shutdown()
+    
+
 
 
 if __name__ == '__main__':
