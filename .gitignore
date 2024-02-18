@@ -39,6 +39,6 @@ __pycache__/
 *$py.class
 
 # Ros build files
-build
-log 
-install
+build/
+log/ 
+install/
