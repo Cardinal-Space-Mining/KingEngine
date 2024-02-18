@@ -15,14 +15,6 @@ using namespace std::chrono_literals;
 using std::placeholders::_1;
 using namespace ros_bridge;
 
-/* This example creates a subclass of Node and uses std::bind() to register a
- * member function as a callback from the timer. */
-
-void default_cb(double, double)
-{
-}
-
-std::function<void(double, double)> location_change_cb = default_cb;
 
 class LidarNode : public rclcpp::Node
 {
@@ -38,7 +30,7 @@ public:
   {
 
     RCLCPP_INFO(this->get_logger(), "Recieved location: (%F, %F)", msg.x, msg.y);
-    location_change_cb(msg.x, msg.y);
+    ros_bridge::on_location_update(msg.x, msg.y);
   }
   rclcpp::Subscription<custom_types::msg::Location>::SharedPtr location_sub;
   rclcpp::Publisher<custom_types::msg::Map>::SharedPtr map_pub;
@@ -66,15 +58,10 @@ void ros_bridge::set_map(std::vector<double> &l)
   node_inc_ref->map_pub->publish(m);
 }
 
-void ros_bridge::set_location_update_cb(std::function<void(double, double)> func)
-{
-  location_change_cb = func;
-}
-
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
-  // TODO Spawn Sam Lidar System
+  ros_bridge::on_startup();
   node = std::make_shared<LidarNode>();
   rclcpp::spin(node);
   node = nullptr;

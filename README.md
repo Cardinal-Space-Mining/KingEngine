@@ -9,23 +9,36 @@ It contains ros code for each subsystem to communicate.
 see https://docs.ros.org/en/iron/Installation.html
 
 # Idea
-Abstract away ros workings behind predefined function calls so not everyone on the team needs to learn ros.
-These calls are in each package under `ros_bridge.hpp` in each respective package
-Layout as follows:
+Abstract away ros workings so not everyone on the team needs to learn ros.
+Functions are implemented in main.cpp
+Callbacks have no implementation and will be filled by the subsystem person
 
+Layout as follows:
 * King Engine
-    * get_location
-    * set_destination
+    * Functions:
+        * get_location (Returns last known location)
+        * set_destination (Sets destination for the rest of the systems)
+    * Callbacks:
+        * None
 * Lidar
-    * get_location
-    * set_map
+    * Functions:
+        * set_map (Sends a map to pathplan)
+    * Callbacks
+        * on_location_update (Triggers whenever localization pushes a location update)
+        * on_startup (Runs once at startup. Should return)
 * Localization
-    * an entry point (localization_main) passing a lambda to set location
+    * localization_main (a entrypoint that passes a lambda to set location)
 * Path Plan
-    * on_map_update
-    * set_path
-    * get_location
+    * Functions:
+        * None
+    * Callbacks:
+        * on_lidar_data (called whenever the lidar sends data)
+        * on_location_change (Triggers whenever localization pushes a location update)
+        * on_destination_change (Triggers whenever king engine pushes a change of destination)
 * Traversal
-    * get_location
-    * get_path
+    * Functions:
+        * None
+    * Callbacks:
+        * on_location_change (Triggers whenever localization pushes a location update)
+        * on_path_change (Triggers whenever path plan triggers a new path)
 
