@@ -15,7 +15,7 @@ find_package(custom_types REQUIRED)
 
 
 
-add_executable(main src/main.cpp)
+add_executable(main src/main.cpp src/subsystems/Collection.cpp src/subsystems/Hopper.cpp )
 ament_target_dependencies(main rclcpp custom_types)
 
 target_include_directories(main PUBLIC

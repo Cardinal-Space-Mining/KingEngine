@@ -1,5 +1,7 @@
+# pragma once
 #include <vector>
-double getMovingAverage(std::vector<double>& motorDataList, int movingAvgRange) {
+#include <numeric>
+inline double getMovingAverage(std::vector<double>& motorDataList, std::size_t movingAvgRange) {
     double currentAverage = 0.0;
     if (motorDataList.size() > movingAvgRange) {
         motorDataList.erase(motorDataList.begin());

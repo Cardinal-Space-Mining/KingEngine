@@ -2,8 +2,7 @@
 // Created by conno on 2/17/2024.
 //
 
-#ifndef KINGENGINE_HOPPER_H
-#define KINGENGINE_HOPPER_H
+#pragma once
 
 class Hopper {
 
@@ -68,5 +67,3 @@ private:
 //    EncoderQueue sectorQueue;
 
 };
-
-#endif //KINGENGINE_HOPPER_H

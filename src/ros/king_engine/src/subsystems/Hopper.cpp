@@ -6,12 +6,12 @@
 // Timer to know how long to mine and offload
 // Assume that we will have access to correct location
 
-#include "Hopper.h"
-#include "subsystems_util.h"
-#include "Collection.h"
+#include "king_engine/subsystems/Hopper.h"
+#include "king_engine/subsystems/subsystem_util.h"
+#include "king_engine/subsystems/Collection.h"
 
 
-void Hopper::Hopper() {
+Hopper::Hopper() {
 //    talonInit(hopperMotor);
 //    talonSRXInit(actuator);
 //    hopperTab.add("Unload Ladder Encoder Value", unloadEncoder);

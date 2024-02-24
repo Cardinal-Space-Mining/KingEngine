@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vector>
 
 
@@ -19,7 +21,7 @@ class Collection {
     public:
         void periodic();
         bool getTrencherJammed();
-        void setTrencherJammed(boolean status);
+        void setTrencherJammed(bool status);
         double getTrencherEncoder();
         double getTrencherVelocity();
         double getTrencherCurrent();
