@@ -6,7 +6,7 @@ It contains ros code for each subsystem to communicate.
 ![Controls Architecture Diagram](https://github.com/Cardinal-Space-Mining/KingEngine/blob/ros2-iron/assets/Architecture2.jpg?raw=true)
 
 # Ros2 Installation instructions
-see https://docs.ros.org/en/iron/Installation.html
+see [https://docs.ros.org/en/humble/Installation.html](https://docs.ros.org/en/humble/index.html)
 
 # Idea
 Abstract away ros workings so not everyone on the team needs to learn ros.
