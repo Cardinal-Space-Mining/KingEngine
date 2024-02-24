@@ -13,9 +13,19 @@ find_package(custom_types REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+execute_process(
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/Sick-Perception
+  COMMAND cmake . -B ./cmake-build -DMULTISTAGE_STEP=0
+  COMMAND cmake --build ./cmake-build --target install --config Release
+)
+set(BUILD_TEST OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
+add_subdirectory(Sick-Perception)
 
 add_executable(main src/main.cpp src/lidar.cpp)
 ament_target_dependencies(main rclcpp custom_types)
+
+target_link_libraries(main PRIVATE SickPerception_lib)  # need to setup header export, or just manually include lidar_api.h since that is the only one
 
 target_include_directories(main PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
