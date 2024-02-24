@@ -8,6 +8,7 @@
 
 #include "Hopper.h"
 #include "subsystems_util.h"
+#include "Collection.h"
 
 
 void Hopper::Hopper() {
