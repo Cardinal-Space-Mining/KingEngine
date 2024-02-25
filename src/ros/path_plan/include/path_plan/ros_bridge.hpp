@@ -3,8 +3,6 @@
 #include <utility>
 #include <cstdint>
 
-#include "WeightMap.hpp"
-
 namespace ros_bridge
 {
     using point = std::pair<uint16_t, uint16_t>;
