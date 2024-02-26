@@ -5,7 +5,8 @@ project(lidar)
 
 # static stuff
 if(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
-  set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/install" CACHE STRING "" FORCE)
+  set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/install" CACHE PATH "" FORCE)
+  set(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT false)    # apparently this overrides the subdirectory whereas just changing the prefix alone does not
   message(STATUS "[KE-LIDAR]: Install prefix overridden: ${CMAKE_INSTALL_PREFIX}")
 endif()
 if(NOT MSVC)
