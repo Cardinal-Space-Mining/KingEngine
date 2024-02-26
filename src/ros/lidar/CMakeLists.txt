@@ -18,24 +18,24 @@ endif()
 
 
 # build subproject protobuf compiler and install
-set(SUBPROJECT_BUILD_DIR ${CMAKE_BINARY_DIR}/subproject-stage1)
+set(SUBPROJECT_PROTOBUF_BUILD_DIR ${CMAKE_BINARY_DIR}/subproject-protobuf)
 message(STATUS "[KE-LIDAR]: Configuring submodule protobuf...")
 execute_process(
   COMMAND cmake -S ${PROJECT_SOURCE_DIR}/Sick-Perception
-                -B ${SUBPROJECT_BUILD_DIR}
+                -B ${SUBPROJECT_PROTOBUF_BUILD_DIR}
                 -Dsickperception_MULTISTAGE_STEP=0
                 -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
 )
 message(STATUS "[KE-LIDAR]: Building and installing submodule protobuf...")
 execute_process(
-  COMMAND cmake --build ${SUBPROJECT_BUILD_DIR} --target install --config Release   # build and install
+  COMMAND cmake --build ${SUBPROJECT_PROTOBUF_BUILD_DIR} --target install --config Release ${SUBPROJECT_PROTOBUF_PARALLEL_ARG}
 )
 # configure subproject main lib
 message(STATUS "[KE-LIDAR]: Configuring submodule main library...")
 set(_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 set(BUILD_SHARED_LIBS OFF)
 set(sickperception_BUILD_TEST OFF)
-set(MULTISTAGE_STEP 1)
+set(sickperception_MULTISTAGE_STEP 1)
 add_subdirectory(Sick-Perception)
 set(BUILD_SHARED_LIBS ${_BUILD_SHARED_LIBS})
 

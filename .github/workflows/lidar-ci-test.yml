@@ -28,7 +28,7 @@ jobs:
       - name: "Build/Install"
         run: |
           pushd src/ros/lidar
-          cmake . -B ./cmake-build -DTEST_NOROS=ON
+          cmake . -B ./cmake-build -DTEST_NOROS=ON -DSUBPROJECT_PROTOBUF_PARALLEL_ARG="--parallel $(nproc)"
           cmake --build ./cmake-build --target install --config Release --parallel $(nproc)
           popd
 
