@@ -8,6 +8,12 @@ if(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
   set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/install" CACHE STRING "" FORCE)
   message(STATUS "[KE-LIDAR]: Install prefix overridden: ${CMAKE_INSTALL_PREFIX}")
 endif()
+if(NOT MSVC)
+	if(NOT CMAKE_BUILD_TYPE)
+		set(CMAKE_BUILD_TYPE Release)
+		message(STATUS "[KE-LIDAR]: Release build type applied by default for non-MSVC build system")
+	endif()
+endif()
 
 
 
