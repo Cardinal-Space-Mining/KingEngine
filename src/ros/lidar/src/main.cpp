@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
   node = std::make_shared<LidarNode>();
   rclcpp::spin(node);
   node = nullptr;
+  ros_bridge::on_shutdown();  // << is this correct? -- if not we just need this to get called at program exit
   rclcpp::shutdown();
   return 0;
 }
