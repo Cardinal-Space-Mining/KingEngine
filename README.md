@@ -10,7 +10,8 @@ see [https://docs.ros.org/en/humble/Installation.html](https://docs.ros.org/en/h
 
 # Build Instructions:
 * git clone https://github.com/Cardinal-Space-Mining/KingEngine.git --recurse-submodules
-* colcon build
+* cd ./KingEngine
+* colcon build --executor parallel
 
 
 # Idea
