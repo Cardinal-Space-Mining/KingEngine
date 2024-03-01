@@ -45,7 +45,7 @@ set(BUILD_SHARED_LIBS ${_BUILD_SHARED_LIBS})
 
 
 # main build
-option(TEST_NOROS "Test build w/o ROS" OFF)
+option(TEST_NOROS "Test build w/o ROS" OFF)   # manually toggle this during tests
 if(${TEST_NOROS})
 # Test build
 

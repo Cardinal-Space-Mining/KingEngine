@@ -8,7 +8,7 @@
 #include "lidar/ros_bridge.hpp"
 
 #include "rclcpp/rclcpp.hpp"
-#include "custom_types/msg/location.hpp"
+#include "custom_types/msg/pose.hpp"
 #include "custom_types/msg/map.hpp"
 
 using namespace std::chrono_literals;
@@ -22,17 +22,17 @@ public:
   LidarNode()
       : Node("lidar")
   {
-    location_sub = this->create_subscription<custom_types::msg::Location>("location", 10, std::bind(&LidarNode::topic_callback, this, _1));
+    pose_sub = this->create_subscription<custom_types::msg::Pose>("pose", 10, std::bind(&LidarNode::topic_callback, this, _1));
     map_pub = this->create_publisher<custom_types::msg::Map>("map", 10);
   }
 
-  void topic_callback(const custom_types::msg::Location &msg)
+  void topic_callback(const custom_types::msg::Pose &msg)
   {
 
-    RCLCPP_INFO(this->get_logger(), "Recieved location: (%F, %F)", msg.x, msg.y);
-    ros_bridge::on_location_update(msg);
+    RCLCPP_INFO(this->get_logger(), "Recieved location: (%F, %F, %F)", msg.x, msg.y, msg.z);
+    ros_bridge::on_pose_update(msg);
   }
-  rclcpp::Subscription<custom_types::msg::Location>::SharedPtr location_sub;
+  rclcpp::Subscription<custom_types::msg::Pose>::SharedPtr pose_sub;
   rclcpp::Publisher<custom_types::msg::Map>::SharedPtr map_pub;
 };
 
@@ -40,7 +40,7 @@ std::mutex node_mutex;
 std::shared_ptr<LidarNode> node{nullptr};
 
 
-void ros_bridge::set_map(const custom_types::msg::Map& map)
+void ros_bridge::export_map(const custom_types::msg::Map& map)
 {
   // Check if node has been created
   if (!node)
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
   node = std::make_shared<LidarNode>();
   rclcpp::spin(node);
   node = nullptr;
-  ros_bridge::on_shutdown();  // << is this correct? -- if not we just need this to get called at program exit
+  ros_bridge::on_shutdown();
   rclcpp::shutdown();
   return 0;
 }

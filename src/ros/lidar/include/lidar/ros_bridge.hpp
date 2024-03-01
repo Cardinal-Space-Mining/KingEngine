@@ -2,7 +2,7 @@
 #include <functional>
 #include <vector>
 
-#include "custom_types/msg/location.hpp"
+#include "custom_types/msg/pose.hpp"
 #include "custom_types/msg/map.hpp"
 
 
@@ -14,9 +14,9 @@ namespace ros_bridge {
     void on_shutdown();
 
     /** Gets called when new localization data is available */
-    void on_location_update(double x, double y);   // need (x,y,z,qx,qy,qz,qw) here OR (xyz*, qxyzw*)
+    void on_pose_update(const custom_types::msg::Pose& pose);       // timestamp!?
     /** Access the obstacle weightmap from the processing instance */
-    void set_map(const custom_types::msg::Map& map);
+    void export_map(const custom_types::msg::Map& map);
 
 
 } // namespace ros_bridge

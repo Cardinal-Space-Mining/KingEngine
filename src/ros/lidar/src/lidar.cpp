@@ -2,9 +2,11 @@
 #include "lidar_api.h"
 
 
-void ros_bridge::on_location_update(const custom_types::msg::Location &loc) {
-    (void) loc;
-    ldrp::updateWorldPose(nullptr, nullptr, 0.f, 0U);
+void ros_bridge::on_pose_update(const custom_types::msg::Pose &pose) {
+    const float
+        _xyz[3] = { pose.x, pose.y, pose.z },
+        _quat[4] = { pose.qx, pose.qy, pose.qz, pose.qw };
+    ldrp::updateWorldPose(_xyz, _quat, 0);
 }
 
 void ros_bridge::on_startup() {
