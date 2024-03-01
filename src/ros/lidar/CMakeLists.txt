@@ -45,14 +45,14 @@ set(BUILD_SHARED_LIBS ${_BUILD_SHARED_LIBS})
 
 
 # main build
-option(TEST_NOROS "Test build w/o ROS" ON)
+option(TEST_NOROS "Test build w/o ROS" OFF)
 if(${TEST_NOROS})
 # Test build
 
   message(STATUS "[KE-LIDAR]: Configuring TEST (NOROS) build")
 
   add_executable(tmain "src/test/tmain.cpp")
-  target_link_libraries(tmain PUBLIC SickPerception_lib)
+  target_link_libraries(tmain SickPerception_lib)
   install(TARGETS tmain
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
   )
@@ -79,7 +79,7 @@ else()
   add_executable(main "src/main.cpp" "src/lidar.cpp")
   ament_target_dependencies(main rclcpp custom_types)
 
-  target_link_libraries(main PRIVATE SickPerception_lib)
+  target_link_libraries(main SickPerception_lib)
 
   target_include_directories(main PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
