@@ -22,10 +22,10 @@ void initialize_map(const uint16_t map_width, const uint16_t map_height) {
 
 optional_path update_path() {
     try {
-        return {current_map.getPath(
+        return std::make_optional(current_map.getPath(
                 current_location.first, current_location.second,
                 destination.first, destination.second,
-                turn_cost)};
+                turn_cost));
     }
     catch (const std::invalid_argument& e) {
         // todo might want to log errors
@@ -45,8 +45,8 @@ optional_point doubles_to_mapsize_ints(double x, double y) {
         // y doesn't fit into a uint16_t
         return std::nullopt;
     }
-    point result(static_cast<uint16_t>(x_translated), static_cast<uint16_t>(y_translated));
-    return std::make_optional(result);
+    return std::make_optional(static_cast<uint16_t>(x_translated),
+                              static_cast<uint16_t>(y_translated));
 }
 
 optional_path ros_bridge::on_lidar_data(const std::vector<double> &vec) {
