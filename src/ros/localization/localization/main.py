@@ -21,12 +21,9 @@ def main(args=None):
     thd = Thread(target=lambda: executor.spin)
     thd.start()
 
-    def publish_location(x: float, y: float) -> None:
-        msg = Location()                                                
-        msg.x = float(x)
-        msg.y = float(y)                                          
-        loc_publisher.publish(msg)
-        loc_node.get_logger().info(f'Publishing: ({msg.x}, {msg.y})')  
+    def publish_location(location: Location) -> None:                                  
+        loc_publisher.publish(Location)
+        loc_node.get_logger().info(f'Publishing: ({location})')  
 
     # Hand the main thread off to localization
     try:
