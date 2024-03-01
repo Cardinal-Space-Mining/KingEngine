@@ -10,9 +10,10 @@
  * Build: `colcon build`
  * Source new nodes: `source ./install/setup.bash`
  # Running
+ * Build if you like
+ * Source the installation files: `source ./install/setup.sh`
  * `ros2 run <package name> <node name>`
  # Colcon Build is annoyed at using setuptools
  * `pip install setuptools==58.2.0`
-
  # VSCode autocomplete and include errors
  * Add `\opt\ros\humble\include\**` to vs code include path
