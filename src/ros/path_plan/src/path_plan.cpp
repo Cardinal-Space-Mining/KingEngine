@@ -34,17 +34,18 @@ optional_path update_path() {
 }
 
 optional_point doubles_to_mapsize_ints(double x, double y) {
-    if (x < 0 || x > std::numeric_limits<uint16_t>::max()) {
+    const double x_translated = x/ARENA_SIZE.first  * current_map.getWidth();
+    const double y_translated = y/ARENA_SIZE.second * current_map.getHeight();
+
+    if (x_translated < 0 || x_translated > std::numeric_limits<uint16_t>::max()) {
         // x doesn't fit into a uint16_t
         return std::nullopt;
     }
-    if (y < 0 || y > std::numeric_limits<uint16_t>::max()) {
+    if (y_translated < 0 || y_translated > std::numeric_limits<uint16_t>::max()) {
         // y doesn't fit into a uint16_t
         return std::nullopt;
     }
-    point result(0, 0);
-    result.first = static_cast<uint16_t>(x/ARENA_SIZE.first * current_map.getWidth());
-    result.second = static_cast<uint16_t>(y/ARENA_SIZE.second * current_map.getHeight());
+    point result(static_cast<uint16_t>(x_translated), static_cast<uint16_t>(y_translated));
     return std::make_optional(result);
 }
 
@@ -57,7 +58,7 @@ optional_path ros_bridge::on_lidar_data(const std::vector<double> &vec) {
 
 optional_path ros_bridge::on_location_change(double x, double y) {
     optional_point new_point = doubles_to_mapsize_ints(x, y);
-    if (new_point.hasValue()) {
+    if (new_point.has_value()) {
         current_location = new_point.value();
         return update_path();
     }
@@ -66,7 +67,7 @@ optional_path ros_bridge::on_location_change(double x, double y) {
 
 optional_path ros_bridge::on_destination_change(double x, double y) {
     optional_point new_point = doubles_to_mapsize_ints(x, y);
-    if (new_point.hasValue()) {
+    if (new_point.has_value()) {
         destination = new_point.value();
         return update_path();
     }
