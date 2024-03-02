@@ -20,10 +20,10 @@ optional_path update_path() {
         auto src = current_location.value();
         auto dst = current_location.value();
         try {
-            return std::make_optional<path>(current_map.getPath(
+            return current_map.getPath(
                     src.first, src.second,
                     dst.first, dst.second,
-                    turn_cost));
+                    turn_cost);
         }
         catch (const std::invalid_argument &e) {
             // todo might want to log errors
