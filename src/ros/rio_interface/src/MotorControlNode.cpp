@@ -8,9 +8,9 @@ using std::placeholders::_1;
 
 MotorCtrlNode::MotorCtrlNode(std::mutex &locking_mtx, MotorSerialConnection &rio_conn) : Node("motor_connector"), locking_mtx(locking_mtx), rio_conn(rio_conn)
 {
-    this->neutral_sub = this->create_subscription<MotorNeutral>("location", 10, std::bind(&MotorCtrlNode::neutral_cb, this, _1));
-    this->percent_sub = this->create_subscription<MotorPercent>("location", 10, std::bind(&MotorCtrlNode::percent_cb, this, _1));
-    this->velocity_sub = this->create_subscription<MotorVelocity>("location", 10, std::bind(&MotorCtrlNode::velocity_cb, this, _1));
+    this->neutral_sub = this->create_subscription<MotorNeutral>("motor_neutral_mode_updates", 10, std::bind(&MotorCtrlNode::neutral_cb, this, _1));
+    this->percent_sub = this->create_subscription<MotorPercent>("motor_percent_ctrl_updates", 10, std::bind(&MotorCtrlNode::percent_cb, this, _1));
+    this->velocity_sub = this->create_subscription<MotorVelocity>("motor_velocity_ctrl_updates", 10, std::bind(&MotorCtrlNode::velocity_cb, this, _1));
 }
 
 void MotorCtrlNode::neutral_cb(const MotorNeutral &msg)
