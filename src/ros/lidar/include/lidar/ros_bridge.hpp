@@ -14,7 +14,7 @@ namespace ros_bridge {
     void on_shutdown();
 
     /** Gets called when new localization data is available */
-    void on_pose_update(const custom_types::msg::Pose& pose);       // timestamp!?
+    void on_pose_update(const custom_types::msg::Pose& pose, uint64_t ts_us);       // timestamp!?
     /** Access the obstacle weightmap from the processing instance */
     void export_map(const custom_types::msg::Map& map);
 

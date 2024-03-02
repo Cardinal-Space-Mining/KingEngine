@@ -2,7 +2,7 @@
 #include "lidar_api.h"
 
 
-void ros_bridge::on_pose_update(const custom_types::msg::Pose& pose) {
+void ros_bridge::on_pose_update(const custom_types::msg::Pose& pose, uint64_t ts_us) {
 
     const float _pose[7] =
     {
@@ -15,7 +15,7 @@ void ros_bridge::on_pose_update(const custom_types::msg::Pose& pose) {
         (float)pose.qw
     };
 
-    ldrp::updateWorldPose(_pose, _pose + 3);     // << timestamp!?
+    ldrp::updateWorldPose(_pose, _pose + 3, ts_us);     // << timestamp!?
 
 }
 
