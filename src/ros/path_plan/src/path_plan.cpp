@@ -12,7 +12,6 @@ WeightMap current_map(MAP_DIM.first, MAP_DIM.second);
 
 optional_point current_location = std::nullopt;
 optional_point destination = std::nullopt;
-optional_path current_path = std::nullopt;
 
 const int turn_cost = 10;
 
@@ -21,11 +20,10 @@ optional_path update_path() {
         auto src = current_location.value();
         auto dst = current_location.value();
         try {
-            current_path = std::make_optional<path>(current_map.getPath(
+            return std::make_optional<path>(current_map.getPath(
                     src.first, src.second,
                     dst.first, dst.second,
                     turn_cost));
-            return current_path;
         }
         catch (const std::invalid_argument &e) {
             // todo might want to log errors
