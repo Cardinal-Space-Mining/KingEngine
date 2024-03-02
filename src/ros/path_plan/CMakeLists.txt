@@ -13,7 +13,7 @@ find_package(custom_types REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(main src/main.cpp src/path_plan.cpp)
+add_executable(main src/main.cpp src/path_plan.cpp src/WeightMap.cpp)
 ament_target_dependencies(main rclcpp custom_types)
 
 target_include_directories(main PUBLIC
