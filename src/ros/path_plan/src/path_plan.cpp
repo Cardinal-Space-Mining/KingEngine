@@ -2,35 +2,37 @@
 #include "path_plan/WeightMap.hpp"
 
 #include <stdexcept>
-#include <optional>
+#include <limits>
 
 using namespace ros_bridge;
 
-point current_location;
-point destination;
-WeightMap current_map;
+const std::pair<double, double> ARENA_SIZE(6.88, 5.0); // in meters
+constexpr point MAP_DIM(688, 500);
+WeightMap current_map(MAP_DIM.first, MAP_DIM.second);
+
+optional_point current_location = std::nullopt;
+optional_point destination = std::nullopt;
+optional_path current_path = std::nullopt;
 
 const int turn_cost = 10;
-const std::pair<double, double> ARENA_SIZE(6.88, 5.0) // in meters
-
-void initialize_map(const uint16_t map_width, const uint16_t map_height) {
-    current_map = WeightMap(map_width, map_height);
-    // initialize coordinates with impossible numbers to begin so they won't work before both are properly set.
-    current_location(std::numeric_limits<uint16_t>::max(), std::numeric_limits<uint16_t>::max());
-    destination(std::numeric_limits<uint16_t>::max(), std::numeric_limits<uint16_t>::max());
-}
 
 optional_path update_path() {
-    try {
-        return std::make_optional(current_map.getPath(
-                current_location.first, current_location.second,
-                destination.first, destination.second,
-                turn_cost));
+    if (current_location.has_value() && destination.has_value()) {
+        auto src = current_location.value();
+        auto dst = current_location.value();
+        try {
+            current_path = std::make_optional<path>(current_map.getPath(
+                    src.first, src.second,
+                    dst.first, dst.second,
+                    turn_cost));
+            return current_path;
+        }
+        catch (const std::invalid_argument &e) {
+            // todo might want to log errors
+            return std::nullopt;
+        }
     }
-    catch (const std::invalid_argument& e) {
-        // todo might want to log errors
-        return std::nullopt;
-    }
+    return std::nullopt;
 }
 
 optional_point doubles_to_mapsize_ints(double x, double y) {
@@ -45,7 +47,7 @@ optional_point doubles_to_mapsize_ints(double x, double y) {
         // y doesn't fit into a uint16_t
         return std::nullopt;
     }
-    return std::make_optional(static_cast<uint16_t>(x_translated),
+    return std::make_optional<point>(static_cast<uint16_t>(x_translated),
                               static_cast<uint16_t>(y_translated));
 }
 
@@ -57,19 +59,11 @@ optional_path ros_bridge::on_lidar_data(const std::vector<double> &vec) {
 }
 
 optional_path ros_bridge::on_location_change(double x, double y) {
-    optional_point new_point = doubles_to_mapsize_ints(x, y);
-    if (new_point.has_value()) {
-        current_location = new_point.value();
-        return update_path();
-    }
-    return std::nullopt;
+    current_location = doubles_to_mapsize_ints(x, y);
+    return update_path();
 }
 
 optional_path ros_bridge::on_destination_change(double x, double y) {
-    optional_point new_point = doubles_to_mapsize_ints(x, y);
-    if (new_point.has_value()) {
-        destination = new_point.value();
-        return update_path();
-    }
-    return std::nullopt;
+    destination = doubles_to_mapsize_ints(x, y);
+    return update_path();
 }
