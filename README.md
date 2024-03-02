@@ -8,6 +8,12 @@ It contains ros code for each subsystem to communicate.
 # Ros2 Humble Installation instructions
 see [https://docs.ros.org/en/humble/Installation.html](https://docs.ros.org/en/humble/index.html)
 
+# Build Instructions:
+* git clone https://github.com/Cardinal-Space-Mining/KingEngine.git --recurse-submodules
+* cd ./KingEngine
+* colcon build --executor parallel
+
+
 # Idea
 Abstract away ros workings so not everyone on the team needs to learn ros.
 Functions are implemented in main.cpp

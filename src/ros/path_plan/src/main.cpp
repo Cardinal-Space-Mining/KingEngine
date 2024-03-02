@@ -48,7 +48,7 @@ class PathPlanNode : public rclcpp::Node
 
     void lidar_change_cb(const custom_types::msg::Map& map){
       RCLCPP_INFO(this->get_logger(), "%s" ,"Recieved lidar data");
-      auto path = ros_bridge::on_lidar_data(map.map);
+      auto path = ros_bridge::on_lidar_data(map);
       if (path.has_value()){
         this->publish_path(path.value());
       }

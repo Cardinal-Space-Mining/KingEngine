@@ -30,7 +30,7 @@ public:
   {
 
     RCLCPP_INFO(this->get_logger(), "Recieved location: (%F, %F)", msg.x, msg.y);
-    ros_bridge::on_location_update(msg.x, msg.y);
+    ros_bridge::on_location_update(msg);
   }
   rclcpp::Subscription<custom_types::msg::Location>::SharedPtr location_sub;
   rclcpp::Publisher<custom_types::msg::Map>::SharedPtr map_pub;
@@ -39,7 +39,8 @@ public:
 std::mutex node_mutex;
 std::shared_ptr<LidarNode> node{nullptr};
 
-void ros_bridge::set_map(std::vector<double> &l)
+
+void ros_bridge::set_map(const custom_types::msg::Map& map)
 {
   // Check if node has been created
   if (!node)
@@ -48,14 +49,10 @@ void ros_bridge::set_map(std::vector<double> &l)
     return;
   }
 
-  // Assemble message
-  custom_types::msg::Map m;
-  m.map = l;
-
   // Increment ref count so no dealloc, lock node, and publish
   std::shared_ptr<LidarNode> node_inc_ref = node;
   std::lock_guard<std::mutex> node_lock(node_mutex);
-  node_inc_ref->map_pub->publish(m);
+  node_inc_ref->map_pub->publish(map);
 }
 
 int main(int argc, char *argv[])
