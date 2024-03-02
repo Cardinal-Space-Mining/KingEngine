@@ -390,9 +390,7 @@ WeightMap::addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace
     }
 }
 
-
-void
-WeightMap::addCircle(mapsize_t x_in, mapsize_t y_in, mapsize_t radius, weight_t weight, bool gradient, bool overwrite) {
+void WeightMap::addCircle(mapsize_t x_in, mapsize_t y_in, mapsize_t radius, weight_t weight, bool gradient, bool overwrite) {
     if (!WeightMap::isValidWeight(weight)) {
         char error_message[60];
         std::snprintf(error_message, sizeof(error_message), "Weight {%u} out of bounds!", weight);
