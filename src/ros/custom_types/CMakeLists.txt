@@ -13,6 +13,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Location.msg"
   "msg/Map.msg"
   "msg/Path.msg"
+  "msg/Pose.msg"
 )
 
 # uncomment the following section in order to fill in
