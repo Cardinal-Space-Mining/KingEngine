@@ -49,9 +49,9 @@ optional_point doubles_to_mapsize_ints(double x, double y) {
                               static_cast<uint16_t>(y_translated));
 }
 
-optional_path ros_bridge::on_lidar_data(const std::vector<double> &vec) {
+optional_path ros_bridge::on_lidar_data(const custom_types::msg::Map& map) {
     //TODO Finish this
-    (void) vec;
+    (void) map;
 
     return update_path();
 }
