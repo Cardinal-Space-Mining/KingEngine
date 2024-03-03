@@ -28,32 +28,33 @@ public:
 
   void topic_callback(const custom_types::msg::Pose &msg)
   {
-
     RCLCPP_INFO(this->get_logger(), "Recieved location: (%F, %F, %F)", msg.x, msg.y, msg.z);
     ros_bridge::on_pose_update(msg);
   }
+
   rclcpp::Subscription<custom_types::msg::Pose>::SharedPtr pose_sub;
-  rclcpp::Publisher<custom_types::msg::Map>::SharedPtr map_pub;
+  rclcpp::Publisher<custom_types::msg::Map>::SharedPtr map_pub;     // TODO: need to create register callback for grabbing the next map and publishing
+
 };
 
 std::mutex node_mutex;
 std::shared_ptr<LidarNode> node{nullptr};
 
 
-void ros_bridge::export_map(const custom_types::msg::Map& map)
-{
-  // Check if node has been created
-  if (!node)
-  {
-    std::fprintf(stderr, "%s", "update_destination called before initialization");
-    return;
-  }
+// void ros_bridge::export_map(const custom_types::msg::Map& map)
+// {
+//   // Check if node has been created
+//   if (!node)
+//   {
+//     std::fprintf(stderr, "%s", "update_destination called before initialization");
+//     return;
+//   }
 
-  // Increment ref count so no dealloc, lock node, and publish
-  std::shared_ptr<LidarNode> node_inc_ref = node;
-  std::lock_guard<std::mutex> node_lock(node_mutex);
-  node_inc_ref->map_pub->publish(map);
-}
+//   // Increment ref count so no dealloc, lock node, and publish
+//   std::shared_ptr<LidarNode> node_inc_ref = node;
+//   std::lock_guard<std::mutex> node_lock(node_mutex);
+//   node_inc_ref->map_pub->publish(map);
+// }
 
 int main(int argc, char *argv[])
 {

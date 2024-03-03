@@ -1,4 +1,5 @@
 #pragma once
+
 #include <functional>
 #include <vector>
 
@@ -16,7 +17,9 @@ namespace ros_bridge {
     /** Gets called when new localization data is available */
     void on_pose_update(const custom_types::msg::Pose& pose);       // timestamp!?
     /** Access the obstacle weightmap from the processing instance */
-    void export_map(const custom_types::msg::Map& map);
+    void collect_map(custom_types::msg::Map& map);
+    /** Wait for new map data or until the specified timeout in milliseconds */
+    void wait_next_map(custom_types::msg::Map& map, double timeout_ms);
 
 
 } // namespace ros_bridge
