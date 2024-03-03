@@ -14,6 +14,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Map.msg"
   "msg/Path.msg"
   "msg/Pose.msg"
+  "msg/MotorNeutral.msg"
+  "msg/MotorPercent.msg"
+  "msg/MotorVelocity.msg"
 )
 
 # uncomment the following section in order to fill in
