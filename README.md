@@ -9,9 +9,9 @@ It contains ros code for each subsystem to communicate.
 see [https://docs.ros.org/en/humble/Installation.html](https://docs.ros.org/en/humble/index.html)
 
 # Build Instructions:
-* git clone https://github.com/Cardinal-Space-Mining/KingEngine.git --recurse-submodules
-* cd ./KingEngine
-* colcon build --executor parallel
+* `git clone https://github.com/Cardinal-Space-Mining/KingEngine.git --recurse-submodules`
+* `cd ./KingEngine`
+* `colcon build --executor parallel`
 
 
 # Idea
