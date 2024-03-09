@@ -3,7 +3,7 @@ Makes strategic decisions and makes the robot do things.
 It contains ros code for each subsystem to communicate.
 
 # Current Architecture
-![Controls Architecture Diagram](https://github.com/Cardinal-Space-Mining/KingEngine/blob/ros2-iron/assets/Architecture2.jpg?raw=true)
+![Controls Architecture Diagram](https://github.com/Cardinal-Space-Mining/KingEngine/blob/main/assets/Architecture2.jpg?raw=true)
 
 # Ros2 Humble Installation instructions
 see [https://docs.ros.org/en/humble/Installation.html](https://docs.ros.org/en/humble/index.html)
