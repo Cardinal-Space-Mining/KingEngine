@@ -4,6 +4,12 @@ It contains ros code for each subsystem to communicate.
 
 # Current Architecture
 ![Controls Architecture Diagram](https://github.com/Cardinal-Space-Mining/KingEngine/blob/main/assets/Architecture3.jpg?raw=true)
+* Localization: Provides a 3D Pose of the Robot
+* Obstacle Detection: Takes a 3D Pose and produces obstacles.
+* Path Planning: Takes obstacles, a Pose, a destination, and produces a path to follow
+* Traversal: Takes a path, a pose and produces motor commands
+* Decision Making: Takes pose and sends destination to path planning. Sends commands to actuation.
+* Actuation: Takes motor and actuation commands and sends them to Rio.
 
 # Ros2 Humble Installation instructions
 see [https://docs.ros.org/en/humble/Installation.html](https://docs.ros.org/en/humble/index.html)
