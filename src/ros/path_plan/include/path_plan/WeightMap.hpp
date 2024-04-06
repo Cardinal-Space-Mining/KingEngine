@@ -147,7 +147,7 @@ public:
 
 	static void compressPath(path_t &path);
 
-	void addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite);
+    void addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite);
 
 	void addCircle(mapsize_t x_in, mapsize_t y_in, mapsize_t radius, weight_t weight, bool gradient, bool overwrite);
 

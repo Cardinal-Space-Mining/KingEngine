@@ -7,9 +7,11 @@
 using namespace ros_bridge;
 
 const double ROBOT_WIDTH = 0.5; // in meters
-const std::pair<double, double> ARENA_SIZE(6.88, 5.0); // in meters
-constexpr point MAP_DIM(688, 500);
-WeightMap current_map(MAP_DIM.first, MAP_DIM.second);
+const std::pair<float, float> ARENA_SIZE(6.88f, 5.0f); // in meters
+const float CELL_RESOLUTION = 0.01f; // 0.01 = 1 sq cm for each cell
+
+
+WeightMap current_map(ARENA_SIZE.first / CELL_RESOLUTION, ARENA_SIZE.second / CELL_RESOLUTION);
 
 optional_point current_location = std::nullopt;
 optional_point destination = std::nullopt;
@@ -35,8 +37,8 @@ optional_path update_path() {
 }
 
 optional_point doubles_to_mapsize_ints(double x, double y) {
-    const double x_translated = x/ARENA_SIZE.first  * current_map.getWidth();
-    const double y_translated = y/ARENA_SIZE.second * current_map.getHeight();
+    const int x_translated = x / CELL_RESOLUTION;
+    const int y_translated = y / CELL_RESOLUTION;
 
     if (x_translated < 0 || x_translated > std::numeric_limits<uint16_t>::max()) {
         // x doesn't fit into a uint16_t
@@ -47,21 +49,26 @@ optional_point doubles_to_mapsize_ints(double x, double y) {
         return std::nullopt;
     }
     return std::make_optional<point>(static_cast<uint16_t>(x_translated),
-                              static_cast<uint16_t>(y_translated));
+                                     static_cast<uint16_t>(y_translated));
 }
 
 optional_path ros_bridge::on_lidar_data(const custom_types::msg::Map& msg) {
-    for (int x = 0; x < cells_x; x++) {
-        for (int y = 0; y < cells_y; y++) {
-            double arena_x = msg.origin_x + (x * msg.cell_resolution);
-            double arena_y = msg.origin_y + (y * msg.cell_resolution);
+    const mapsize_t spread_radius = ROBOT_WIDTH / CELL_RESOLUTION;
 
-            mapsize_t map_x = arena_x / ARENA_SIZE.first * current_map.getWidth();
-            mapsize_t map_y = arena_y / ARENA_SIZE.second * current_map.getHeight();
+    for (int data_x = 0; data_x < msg.data_w; data_x++) {
+        for (int data_y = 0; data_y < msg.data_h; data_y++) {
+            int map_x = data_x + msg.origin_x;
+            int map_y = data_y + msg.origin_y;
 
-            if (current_map.isValidPoint(map_x, map_y)) {
-                current_map.addCircle(map_x, map_y, ROBOT_WIDTH / 2, msg.map[y * msg.cell_x + x], true, false);
-            }
+            if (!current_map.isValidPoint(map_x, map_y))
+                continue;
+
+            int raw_weight = 255*msg.map[data_x + data_y * msg.data_w];
+
+            if (!WeightMap::isValidWeight(raw_weight))
+                continue;
+
+            current_map.addCircle(map_x, map_y, spread_radius, raw_weight, true, false);
         }
     }
 
@@ -69,11 +76,15 @@ optional_path ros_bridge::on_lidar_data(const custom_types::msg::Map& msg) {
 }
 
 optional_path ros_bridge::on_location_change(double x, double y) {
-    current_location = doubles_to_mapsize_ints(x, y);
+    auto new_location = doubles_to_mapsize_ints(x, y);
+    if (new_location.has_value())
+        current_location = new_location;
     return update_path();
 }
 
 optional_path ros_bridge::on_destination_change(double x, double y) {
-    destination = doubles_to_mapsize_ints(x, y);
+    auto new_destination = doubles_to_mapsize_ints(x, y);
+    if (new_destination.has_value())
+        current_location = new_destination;
     return update_path();
 }
