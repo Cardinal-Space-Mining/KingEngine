@@ -55,15 +55,15 @@ optional_point doubles_to_mapsize_ints(double x, double y) {
 optional_path ros_bridge::on_lidar_data(const custom_types::msg::Map& msg) {
     const mapsize_t spread_radius = ROBOT_WIDTH / CELL_RESOLUTION;
 
-    for (int data_x = 0; data_x < msg.data_w; data_x++) {
-        for (int data_y = 0; data_y < msg.data_h; data_y++) {
+    for (int data_x = 0; data_x < msg.cells_x; data_x++) {
+        for (int data_y = 0; data_y < msg.cells_y; data_y++) {
             int map_x = data_x + msg.origin_x;
             int map_y = data_y + msg.origin_y;
 
             if (!current_map.isValidPoint(map_x, map_y))
                 continue;
 
-            int raw_weight = 255*msg.map[data_x + data_y * msg.data_w];
+            int raw_weight = 255 * msg.map[data_x + data_y * msg.cells_x];
 
             if (!WeightMap::isValidWeight(raw_weight))
                 continue;
