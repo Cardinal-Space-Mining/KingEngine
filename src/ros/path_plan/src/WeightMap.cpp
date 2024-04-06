@@ -196,30 +196,31 @@ WeightMap::path_t WeightMap::backtracePath(const Node &src, const Node &dst) con
     path.emplace_back(currentNode->x, currentNode->y);
     std::reverse(path.begin(), path.end());
 
-    // Remove points that are redundant
-    if (path.size() < 3) {
-        assert(path[0].first == src.x && path[0].second == src.y);
-        return path;
-    }
-    for (int i = path.size() - 2; i > 0; i--) {
-        // Last point to current
-        int16_t pcx = path[i - 1].first - path[i].first;
-        int16_t pcy = path[i - 1].second - path[i].second;
-        // Current point to next
-        int16_t cnx = path[i].first + path[i + 1].first;
-        int16_t cny = path[i].second + path[i + 1].second;
-        // Previous point to next
-        int16_t pnx = path[i - 1].first - path[i + 1].first;
-        int16_t pny = path[i - 1].second - path[i + 1].second;
-
-        // See what the different between (l->c + c->n) and (p->n)
-        float dist_diff = ((std::sqrt(pcx * pcx + pcy * pcy) + std::sqrt(cnx * cnx + cny * cny)) /
-                           std::sqrt(pnx * pnx + pny * pny)) - 1.0;
-
-        if (std::abs(dist_diff) < 1.0) {
-            path.erase(path.begin() + i);
-        }
-    }
+// This code might be redundant
+//    // Remove points that are redundant
+//    if (path.size() < 3) {
+//        assert(path[0].first == src.x && path[0].second == src.y);
+//        return path;
+//    }
+//    for (int i = path.size() - 2; i > 0; i--) {
+//        // Last point to current
+//        int16_t pcx = path[i - 1].first - path[i].first;
+//        int16_t pcy = path[i - 1].second - path[i].second;
+//        // Current point to next
+//        int16_t cnx = path[i].first + path[i + 1].first;
+//        int16_t cny = path[i].second + path[i + 1].second;
+//        // Previous point to next
+//        int16_t pnx = path[i - 1].first - path[i + 1].first;
+//        int16_t pny = path[i - 1].second - path[i + 1].second;
+//
+//        // See what the different between (l->c + c->n) and (p->n)
+//        float dist_diff = ((std::sqrt(pcx * pcx + pcy * pcy) + std::sqrt(cnx * cnx + cny * cny)) /
+//                           std::sqrt(pnx * pnx + pny * pny)) - 1.0f;
+//
+//        if (std::abs(dist_diff) < 1.0) {
+//            path.erase(path.begin() + i);
+//        }
+//    }
 
     assert(path[0].first == src.x && path[0].second == src.y);
     return path;
@@ -333,8 +334,7 @@ WeightMap::path_t WeightMap::getPathToX(mapsize_t srcX, mapsize_t srcY, mapsize_
     assert(false);
 }
 
-void
-WeightMap::addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite) {
+void WeightMap::addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite) {
 
     if (!WeightMap::isValidWeight(border_weight)) {
         char error_message[60];
@@ -390,9 +390,7 @@ WeightMap::addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace
     }
 }
 
-
-void
-WeightMap::addCircle(mapsize_t x_in, mapsize_t y_in, mapsize_t radius, weight_t weight, bool gradient, bool overwrite) {
+void WeightMap::addCircle(mapsize_t x_in, mapsize_t y_in, mapsize_t radius, weight_t weight, bool gradient, bool overwrite) {
     if (!WeightMap::isValidWeight(weight)) {
         char error_message[60];
         std::snprintf(error_message, sizeof(error_message), "Weight {%u} out of bounds!", weight);
@@ -631,14 +629,14 @@ fweight_t WeightMap::get_linear_cost(Node &a, Node &b) {
     }
 
     if (a.x == b.x) { // vertical line
-        sum += (arr[a.x][a.y].weight + arr[b.x][b.y].weight) / 2.0; // Add the endpoints of the line
+        sum += (arr[a.x][a.y].weight + arr[b.x][b.y].weight) / 2.0f; // Add the endpoints of the line
         for (mapsize_t y = std::min(a.y, b.y) + 1; y < std::max(a.y, b.y); y++) {
             sum += arr[a.x][y].weight;
         }
         return sum;
     }
     if (a.y == b.y) {// horizontal line
-        sum += (arr[a.x][a.y].weight + arr[b.x][b.y].weight) / 2.0; // Add the endpoints of the line
+        sum += (arr[a.x][a.y].weight + arr[b.x][b.y].weight) / 2.0f; // Add the endpoints of the line
         for (mapsize_t x = std::min(a.x, b.x) + 1; x < std::max(a.x, b.x); x++) {
             sum += arr[x][a.y].weight;
         }
@@ -646,7 +644,7 @@ fweight_t WeightMap::get_linear_cost(Node &a, Node &b) {
     }
     if (b.x - a.x == b.y - a.y || b.x - a.x == a.y - b.y) { // line of slope 1 or -1
         int8_t sm = b.x - a.x == b.y - a.y ? 1 : -1; // Sign of slope (magnitude is sqrt2
-        sum += (arr[a.x][a.y].weight + arr[b.x][b.y].weight) / 2.0; // Add the endpoints of the line
+        sum += (arr[a.x][a.y].weight + arr[b.x][b.y].weight) / 2.0f; // Add the endpoints of the line
         const mapsize_t x1 = std::min(a.x, b.x);
         mapsize_t y1 = x1 == a.x ? a.y : b.y;
         for (mapsize_t i = 1; i < std::abs((int32_t) b.x - a.x); i++) {
@@ -655,7 +653,7 @@ fweight_t WeightMap::get_linear_cost(Node &a, Node &b) {
         return sum * 1.42f; // Convert 1D line weight to 2D distance by multiplying by sqrt2 (sqrt(1+m*m) where m=1)
     }
 
-    float m = (float) (b.y - a.y) / (b.x - a.x);
+    float m = (float) (b.y - a.y) / (float) (b.x - a.x);
     const int8_t sm = m > 0 ? 1 : -1;
     m *= sm;
 
@@ -663,47 +661,48 @@ fweight_t WeightMap::get_linear_cost(Node &a, Node &b) {
         const mapsize_t x1 = std::min(a.x, b.x);
         const mapsize_t x2 = std::max(a.x, b.x);
         mapsize_t y = (x1 == a.x) ? a.y : b.y;
-        sum += arr[x1][y].weight / 2.0;
+        sum += arr[x1][y].weight / 2.0f;
 
-        float err = m / 2.0;
+        float err = m / 2.0f;
         for (mapsize_t x = x1 + 1; x < x2; x++) {
-            if (err + m >= 0.5) { // The line crosses into new vertical tile
-                const float t = (0.5 - err) / m; // How far across x before it crosses
+            if (err + m >= 0.5f) { // The line crosses into new vertical tile
+                const float t = (0.5f - err) / m; // How far across x before it crosses
                 sum += arr[x][y].weight * t;
                 y += sm;
                 err -= 1.0;
-                sum += arr[x][y].weight * (1.0 - t);
+                sum += arr[x][y].weight * (1.0f - t);
             } else {
                 sum += arr[x][y].weight;
             }
             err += m;
         }
-        sum += arr[x2][y].weight / 2.0;
+        sum += arr[x2][y].weight / 2.0f;
     } else {  // dy > dx, so incrementing y by 1 safely included all x values
-        m = 1.0 / m; // Flip x and y, so take reciprocal of slope to adjust (dy/dx) => (dx/dy)
+        m = 1.0f / m; // Flip x and y, so take reciprocal of slope to adjust (dy/dx) => (dx/dy)
 
         const mapsize_t y1 = std::min(a.y, b.y);
         const mapsize_t y2 = std::max(a.y, b.y);
         mapsize_t x = (y1 == a.y) ? a.x : b.x;
-        sum += arr[x][y1].weight / 2.0; // Add half the weight of the starting node
+        sum += arr[x][y1].weight / 2.0f; // Add half the weight of the starting node
 
         float err = m / 2;
         for (mapsize_t y = y1 + 1; y < y2; y++) {
-            if (err + m >= 0.5) { // The line crosses into new horizontal tile
-                const float t = (0.5 - err) / m; // How far across y before it crosses
+            if (err + m >= 0.5f) { // The line crosses into new horizontal tile
+                const float t = (0.5f - err) / m; // How far across y before it crosses
                 sum += arr[x][y].weight * t;
                 x += sm;
                 err -= 1.0;
-                sum += arr[x][y].weight * (1.0 - t);
+                sum += arr[x][y].weight * (1.0f - t);
             } else {
                 sum += arr[x][y].weight;
             }
             err += m;
         }
-        sum += arr[x][y2].weight / 2.0; // Add half the weight of the ending node
+        sum += arr[x][y2].weight / 2.0f; // Add half the weight of the ending node
     }
-    return sum * std::sqrt(
-            1.0 + m * m); // Turn the smaller axis component of the line to the length since they are proportional
+    // The sum is only accounting for the length of the line of its largests axis,
+    // so we multiply it by sqrt(1 + m^2) to account for the length of the whole line
+    return sum * std::sqrt(1 + m * m);
 
 #else
     const int32_t dx = std::abs((int32_t)b.x - a.x);
