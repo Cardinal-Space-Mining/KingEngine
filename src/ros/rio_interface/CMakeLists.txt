@@ -13,7 +13,7 @@ find_package(custom_types REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(motor_connector src/motor_connector.cpp src/MotorControlNode.cpp PiSerialControl/src/SerialMotorCtrl.cpp)
+add_executable(motor_connector src/main.cpp src/MotorControlNode.cpp PiSerialControl/src/SerialMotorCtrl.cpp)
 ament_target_dependencies(motor_connector rclcpp custom_types)
 
 target_include_directories(motor_connector PUBLIC
