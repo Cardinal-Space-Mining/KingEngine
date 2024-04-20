@@ -9,13 +9,14 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(custom_types REQUIRED)
+find_package(nav_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(main src/main.cpp src/path_plan.cpp src/WeightMap.cpp)
-ament_target_dependencies(main rclcpp custom_types)
+ament_target_dependencies(main rclcpp custom_types nav_msgs)
 target_link_libraries(main ${OpenCV_LIBS})
 
 target_include_directories(main PUBLIC
