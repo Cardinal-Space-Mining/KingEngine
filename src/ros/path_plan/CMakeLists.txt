@@ -11,10 +11,12 @@ find_package(rclcpp REQUIRED)
 find_package(custom_types REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(main src/main.cpp src/path_plan.cpp src/WeightMap.cpp)
 ament_target_dependencies(main rclcpp custom_types)
+target_link_libraries(main ${OpenCV_LIBS})
 
 target_include_directories(main PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
