@@ -335,7 +335,7 @@ WeightMap::path_t WeightMap::getPathToX(mapsize_t srcX, mapsize_t srcY, mapsize_
     assert(false);
 }
 
-void WeightMap::spreadDataArray(const weight_t data[], mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, mapsize_t radius) {
+void WeightMap::spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, mapsize_t radius) {
     using namespace cv;
 
     Mat raw_data(data_h, data_w, CV_16U, &data);
@@ -344,8 +344,9 @@ void WeightMap::spreadDataArray(const weight_t data[], mapsize_t origin_x, mapsi
 
     raw_data.copyTo(padded_data(Rect(radius, radius, raw_data.cols, raw_data.rows)));
 
-    // Clamp the inputted values within the possible range (even if it's already clamped for some reason)
+    // Clamp the inputted values within the possible range for some reason (even if it's already clamped)
     padded_data = max(min(padded_data, Scalar::all(getMaxWeight())), Scalar::all(0));
+
     Mat dilated = padded_data.clone();
     float radius_f = radius;
     Mat temp(padded_data.rows, padded_data.cols, CV_16U);
