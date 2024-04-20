@@ -31,6 +31,7 @@ class PathPlanNode : public rclcpp::Node
       dest_sub = this->create_subscription<custom_types::msg::Location>("destination", 10, std::bind(&PathPlanNode::destination_change_cb, this, _1));
       path_pub = this->create_publisher<custom_types::msg::Path>("path", 10);
       weight_map_pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>("map", 10);
+      publish_map();
     }
 
     void publish_path(path& path){
