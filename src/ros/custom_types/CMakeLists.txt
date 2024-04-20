@@ -14,9 +14,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Map.msg"
   "msg/Path.msg"
   "msg/Pose.msg"
-  "msg/MotorNeutral.msg"
-  "msg/MotorPercent.msg"
-  "msg/MotorVelocity.msg"
+  "srv/SetTrackVelocity.srv"
+  "srv/StartMining.srv"
+  "srv/StartOffload.srv"
+  "srv/StopMining.srv"
+  "srv/StopOffload.srv"
 )
 
 # uncomment the following section in order to fill in

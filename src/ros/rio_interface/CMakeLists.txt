@@ -13,16 +13,15 @@ find_package(custom_types REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(motor_connector src/main.cpp src/MotorControlNode.cpp PiSerialControl/src/SerialMotorCtrl.cpp)
-ament_target_dependencies(motor_connector rclcpp custom_types)
+add_executable(rio_interface src/main.cpp )
+ament_target_dependencies(rio_interface rclcpp custom_types)
 
-target_include_directories(motor_connector PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/PiSerialControl/include>
+target_include_directories(rio_interface PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(motor_connector PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(rio_interface PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
-install(TARGETS motor_connector
+install(TARGETS rio_interface
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

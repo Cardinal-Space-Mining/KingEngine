@@ -1,2 +1,0 @@
-uint16 motor_id
-float64 velocity_turns_per_second
