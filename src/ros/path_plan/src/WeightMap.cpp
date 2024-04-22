@@ -12,8 +12,10 @@
 #include <functional>
 #include <cassert>
 
+#ifdef HAVE_OPENCV
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#endif
 
 // Node Constructor
 WeightMap::Node::Node(const mapsize_t x_in,
@@ -336,6 +338,7 @@ WeightMap::path_t WeightMap::getPathToX(mapsize_t srcX, mapsize_t srcY, mapsize_
 }
 
 void WeightMap::spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, mapsize_t radius) {
+#ifdef HAVE_OPENCV
     using namespace cv;
 
     Mat raw_data(data_h, data_w, CV_16U, &data);
@@ -369,12 +372,27 @@ void WeightMap::spreadDataArray(const signed char *data, mapsize_t origin_x, map
             if (map_y < 0 || map_y >= height)
                 continue;
             int val = dilated.at<weight_t>(x, y);
-//            int val = padded_data.at<weight_t>(x, y);
 
             if (isValidWeight(val) && val > arr[map_x][map_y].weight)
                 arr[map_x][map_y].weight = val;
         }
     }
+#else
+    for (int x = 0; x < data_w; x++) {
+        int map_x = x + origin_x;
+        if (map_x < 0 || map_x >= width)
+            continue;
+        for (int y = 0; y < dilated.rows; y++) {
+            int map_y = y + origin_y;
+            if (map_y < 0 || map_y >= height)
+                continue;
+            int val = data[x + y*data_w];
+
+            if (isValidWeight(val))
+                addCircle(map_x, map_y, radius, val, true, false);
+        }
+    }
+#endif
 }
 
 void WeightMap::addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite) {

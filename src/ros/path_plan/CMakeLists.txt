@@ -12,12 +12,21 @@ find_package(custom_types REQUIRED)
 find_package(nav_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
-find_package(OpenCV REQUIRED)
-include_directories(${OpenCV_INCLUDE_DIRS})
+find_package(OpenCV)
+if(OpenCV_FOUND)
+  MESSAGE(STATUS "OpenCV installation found")
+  add_compile_definitions(HAVE_OPENCV)
+  include_directories(${OpenCV_INCLUDE_DIRS})
+else()
+  MESSAGE(STATUS "OpenCV installation not found")
+endif()
 
 add_executable(main src/main.cpp src/path_plan.cpp src/WeightMap.cpp)
 ament_target_dependencies(main rclcpp custom_types nav_msgs)
-target_link_libraries(main ${OpenCV_LIBS})
+
+if(OpenCV_FOUND)
+  target_link_libraries(main ${OpenCV_LIBS})
+endif()
 
 target_include_directories(main PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
