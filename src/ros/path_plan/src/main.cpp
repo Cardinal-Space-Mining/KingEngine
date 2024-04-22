@@ -26,11 +26,11 @@ class PathPlanNode : public rclcpp::Node
     PathPlanNode()
     : Node("path_plan")
     {
-      lidar_data_sub = this->create_subscription<nav_msgs::msg::OccupancyGrid>("map", 10, std::bind(&PathPlanNode::lidar_change_cb, this, _1));
+      lidar_data_sub = this->create_subscription<nav_msgs::msg::OccupancyGrid>("lidar_map", 10, std::bind(&PathPlanNode::lidar_change_cb, this, _1));
       location_sub = this->create_subscription<custom_types::msg::Location>("location", 10, std::bind(&PathPlanNode::location_change_cb, this, _1));
       dest_sub = this->create_subscription<custom_types::msg::Location>("destination", 10, std::bind(&PathPlanNode::destination_change_cb, this, _1));
       path_pub = this->create_publisher<custom_types::msg::Path>("path", 10);
-      weight_map_pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>("map", 10);
+      weight_map_pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>("weight_map", 10);
       publish_map();
     }
 
@@ -94,6 +94,11 @@ class PathPlanNode : public rclcpp::Node
 
 int main(int argc, char * argv[])
 {
+#ifdef HAVE_OPENCV
+    std::sout << "OpenCV was found" << std::endl;
+#else
+    std::sout << "OpenCV was not found, on_lidar_data() will take a while for a large amount of data." << std::endl;
+#endif
     ros_bridge::map_init();
     rclcpp::init(argc, argv);
     rclcpp::spin(std::make_shared<PathPlanNode>());
