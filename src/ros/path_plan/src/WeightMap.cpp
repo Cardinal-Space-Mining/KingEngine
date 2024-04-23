@@ -382,7 +382,7 @@ void WeightMap::spreadDataArray(const signed char *data, mapsize_t origin_x, map
         int map_x = x + origin_x;
         if (map_x < 0 || map_x >= width)
             continue;
-        for (int y = 0; y < dilated.rows; y++) {
+        for (int y = 0; y < data_h; y++) {
             int map_y = y + origin_y;
             if (map_y < 0 || map_y >= height)
                 continue;
