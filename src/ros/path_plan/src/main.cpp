@@ -95,9 +95,9 @@ class PathPlanNode : public rclcpp::Node
 int main(int argc, char * argv[])
 {
 #ifdef HAVE_OPENCV
-    std::sout << "OpenCV was found" << std::endl;
+    std::cout << "OpenCV was found" << std::endl;
 #else
-    std::sout << "OpenCV was not found, on_lidar_data() will take a while for a large amount of data." << std::endl;
+    std::cout << "OpenCV was not found, on_lidar_data() will take a while for a large amount of data." << std::endl;
 #endif
     ros_bridge::map_init();
     rclcpp::init(argc, argv);
