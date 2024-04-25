@@ -28,7 +28,7 @@ WeightMap::Node::Node(const mapsize_t x_in,
                                               weight(weight_in), g(g_in), h(h_in) {};
 
 WeightMap::Node::Node() : x(0), y(0), parent_x(std::numeric_limits<mapsize_t>::max()),
-                          parent_y(std::numeric_limits<mapsize_t>::max()), weight(0), g(0), h(0) {};
+                          parent_y(std::numeric_limits<mapsize_t>::max()), weight(getMinWeight()), g(0), h(0) {};
 
 //---------------	Border Place Methods	----------------------------
 
