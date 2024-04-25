@@ -23,7 +23,7 @@ public:
       : Node("lidar")
   {
     pose_sub = this->create_subscription<custom_types::msg::Pose>("pose", 10, std::bind(&LidarNode::topic_callback, this, _1));
-    map_pub = this->create_publisher<custom_types::msg::Map>("map", 10);
+    map_pub = this->create_publisher<custom_types::msg::Map>("lidar_map", 10);
   }
 
   void topic_callback(const custom_types::msg::Pose &msg)
