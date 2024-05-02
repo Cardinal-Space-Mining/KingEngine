@@ -1,6 +1,8 @@
 #include "path_plan/ros_bridge.hpp"
 #include "path_plan/WeightMap.hpp"
 
+#include "nav_msgs/msg/occupancy_grid.hpp"
+
 #include <stdexcept>
 #include <limits>
 
@@ -17,6 +19,11 @@ optional_point current_location = std::nullopt;
 optional_point destination = std::nullopt;
 
 const int turn_cost = 10;
+
+void ros_bridge::map_init() {
+    const mapsize_t spread_radius = ROBOT_WIDTH / CELL_RESOLUTION;
+    current_map.addBorder(spread_radius, WeightMap::getMaxWeight(), BorderPlace::BOTTOM | BorderPlace::LEFT | BorderPlace::RIGHT | BorderPlace::TOP, true, false);
+}
 
 optional_path update_path() {
     if (current_location.has_value() && destination.has_value()) {
@@ -52,27 +59,36 @@ optional_point doubles_to_mapsize_ints(double x, double y) {
                                      static_cast<uint16_t>(y_translated));
 }
 
-optional_path ros_bridge::on_lidar_data(const custom_types::msg::Map& msg) {
+optional_path ros_bridge::on_lidar_data(const nav_msgs::msg::OccupancyGrid& msg) {
     const mapsize_t spread_radius = ROBOT_WIDTH / CELL_RESOLUTION;
-
-    for (int data_x = 0; data_x < msg.cells_x; data_x++) {
-        for (int data_y = 0; data_y < msg.cells_y; data_y++) {
-            int map_x = data_x + msg.origin_x;
-            int map_y = data_y + msg.origin_y;
-
-            if (!current_map.isValidPoint(map_x, map_y))
-                continue;
-
-            int raw_weight = 255 * msg.map[data_x + data_y * msg.cells_x];
-
-            if (!WeightMap::isValidWeight(raw_weight))
-                continue;
-
-            current_map.addCircle(map_x, map_y, spread_radius, raw_weight, true, false);
-        }
-    }
-
+    current_map.spreadDataArray(msg.data.data(), msg.info.origin.position.x, msg.info.origin.position.y, msg.info.width, msg.info.height, spread_radius);
     return update_path();
+}
+
+nav_msgs::msg::OccupancyGrid ros_bridge::get_grid_values() {
+    auto msg = nav_msgs::msg::OccupancyGrid();
+    msg.info.resolution = CELL_RESOLUTION;
+
+    mapsize_t w = current_map.getWidth();
+    mapsize_t h = current_map.getHeight();
+    msg.info.width = w;
+    msg.info.height = h;
+
+    msg.info.origin.position.x = 0.0;
+    msg.info.origin.position.y = 0.0;
+    msg.info.origin.position.z = 0.0;
+    msg.info.origin.orientation.x = 0.0;
+    msg.info.origin.orientation.y = 0.0;
+    msg.info.origin.orientation.z = 0.0;
+    msg.info.origin.orientation.w = 1.0;
+
+    msg.data.resize(w*h, 0);
+
+    auto weights = current_map.getWeights();
+    for (int i = 0; i < w*h; i++)
+        msg.data[i] = weights[i] * (100.0f / current_map.getMaxWeight());
+
+    return msg;
 }
 
 optional_path ros_bridge::on_location_change(double x, double y) {
@@ -88,3 +104,5 @@ optional_path ros_bridge::on_destination_change(double x, double y) {
         current_location = new_destination;
     return update_path();
 }
+
+

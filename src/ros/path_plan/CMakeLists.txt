@@ -9,12 +9,24 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(custom_types REQUIRED)
+find_package(nav_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(OpenCV)
+if(OpenCV_FOUND)
+  MESSAGE(STATUS "OpenCV installation found")
+  add_compile_definitions(HAVE_OPENCV)
+  include_directories(${OpenCV_INCLUDE_DIRS})
+else()
+  MESSAGE(STATUS "OpenCV installation not found")
+endif()
 
 add_executable(main src/main.cpp src/path_plan.cpp src/WeightMap.cpp)
-ament_target_dependencies(main rclcpp custom_types)
+ament_target_dependencies(main rclcpp custom_types nav_msgs)
+
+if(OpenCV_FOUND)
+  target_link_libraries(main ${OpenCV_LIBS})
+endif()
 
 target_include_directories(main PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

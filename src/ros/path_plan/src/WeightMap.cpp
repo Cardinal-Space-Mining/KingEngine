@@ -12,6 +12,10 @@
 #include <functional>
 #include <cassert>
 
+#ifdef HAVE_OPENCV
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#endif
 
 // Node Constructor
 WeightMap::Node::Node(const mapsize_t x_in,
@@ -281,7 +285,6 @@ WeightMap::getPath(mapsize_t srcX, mapsize_t srcY, mapsize_t dstX, mapsize_t dst
 
 
 WeightMap::path_t WeightMap::getPathToX(mapsize_t srcX, mapsize_t srcY, mapsize_t dstX, weight_t turn_cost) {
-
     if (!isValidPoint(srcX, srcY)) {
         char error_message[60];
         std::snprintf(error_message, sizeof(error_message), "Source Point (%u, %u) out of bounds!", srcX, srcY);
@@ -334,8 +337,65 @@ WeightMap::path_t WeightMap::getPathToX(mapsize_t srcX, mapsize_t srcY, mapsize_
     assert(false);
 }
 
-void WeightMap::addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite) {
+void WeightMap::spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, mapsize_t radius) {
+#ifdef HAVE_OPENCV
+    using namespace cv;
 
+    Mat raw_data(data_h, data_w, CV_16U, &data);
+    Mat padded_data(data_h + 2*radius, data_w + 2*radius, CV_16U);
+    padded_data.setTo(Scalar::all(0));
+
+    raw_data.copyTo(padded_data(Rect(radius, radius, raw_data.cols, raw_data.rows)));
+
+    // Clamp the inputted values within the possible range for some reason (even if it's already clamped)
+    padded_data = max(min(padded_data, Scalar::all(getMaxWeight())), Scalar::all(0));
+
+    Mat dilated = padded_data.clone();
+    float radius_f = radius;
+    Mat temp(padded_data.rows, padded_data.cols, CV_16U);
+    for (mapsize_t r = 1; r < radius; r++) {
+        mapsize_t kernel_diameter = 2*r + 1;
+        dilate(padded_data, temp,
+               getStructuringElement(MORPH_ELLIPSE, Size(kernel_diameter, kernel_diameter)),
+               Point(-1, -1), 1, BORDER_CONSTANT, 0);
+        temp *= 1.0f - (float)r / radius_f;
+        dilated = max(dilated, temp);
+    }
+
+    for (int x = 0; x < dilated.cols; x++) {
+        int map_x = x-radius + origin_x;
+        if (map_x < 0 || map_x >= width)
+            continue;
+
+        for (int y = 0; y < dilated.rows; y++) {
+            int map_y = y-radius + origin_y;
+            if (map_y < 0 || map_y >= height)
+                continue;
+            int val = dilated.at<weight_t>(x, y);
+
+            if (isValidWeight(val) && val > arr[map_x][map_y].weight)
+                arr[map_x][map_y].weight = val;
+        }
+    }
+#else
+    for (int x = 0; x < data_w; x++) {
+        int map_x = x + origin_x;
+        if (map_x < 0 || map_x >= width)
+            continue;
+        for (int y = 0; y < dilated.rows; y++) {
+            int map_y = y + origin_y;
+            if (map_y < 0 || map_y >= height)
+                continue;
+            int val = data[x + y*data_w];
+
+            if (isValidWeight(val))
+                addCircle(map_x, map_y, radius, val, true, false);
+        }
+    }
+#endif
+}
+
+void WeightMap::addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite) {
     if (!WeightMap::isValidWeight(border_weight)) {
         char error_message[60];
         std::snprintf(error_message, sizeof(error_message), "Weight {%u} out of bounds!", border_weight);

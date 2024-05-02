@@ -145,7 +145,7 @@ public:
 
 	path_t getPath(mapsize_t srcX, mapsize_t srcY, mapsize_t dstX, mapsize_t dstY, weight_t turn_cost);
 
-	static void compressPath(path_t &path);
+    void spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, mapsize_t radius);
 
     void addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite);
 
