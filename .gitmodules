@@ -1,6 +1,3 @@
-[submodule "src/ros/lidar/Sick-Perception"]
-	path = src/ros/lidar/Sick-Perception
-	url = https://github.com/Cardinal-Space-Mining/Sick-Perception
 [submodule "src/ros/rio_interface/PiSerialControl"]
 	path = src/ros/rio_interface/PiSerialControl
 	url = https://github.com/Cardinal-Space-Mining/PiSerialControl.git
