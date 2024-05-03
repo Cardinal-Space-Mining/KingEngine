@@ -28,7 +28,7 @@ WeightMap::Node::Node(const mapsize_t x_in,
                                               weight(weight_in), g(g_in), h(h_in) {};
 
 WeightMap::Node::Node() : x(0), y(0), parent_x(std::numeric_limits<mapsize_t>::max()),
-                          parent_y(std::numeric_limits<mapsize_t>::max()), weight(0), g(0), h(0) {};
+                          parent_y(std::numeric_limits<mapsize_t>::max()), weight(getMinWeight()), g(0), h(0) {};
 
 //---------------	Border Place Methods	----------------------------
 
@@ -382,7 +382,7 @@ void WeightMap::spreadDataArray(const signed char *data, mapsize_t origin_x, map
         int map_x = x + origin_x;
         if (map_x < 0 || map_x >= width)
             continue;
-        for (int y = 0; y < dilated.rows; y++) {
+        for (int y = 0; y < data_h; y++) {
             int map_y = y + origin_y;
             if (map_y < 0 || map_y >= height)
                 continue;
