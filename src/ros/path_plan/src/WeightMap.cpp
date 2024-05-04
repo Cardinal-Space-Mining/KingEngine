@@ -41,24 +41,39 @@ bool isValid(const BorderPlace &self) {
 }
 
 const char *to_string(const BorderPlace &self) {
-    if (self == BorderPlace::TOP) {
-        return "TOP";
-    }
-    if (self == BorderPlace::BOTTOM) {
-        return "BOTTOM";
-    }
-    if (self == BorderPlace::RIGHT) {
-        return "RIGHT";
-    }
-    if (self == BorderPlace::LEFT) {
-        return "LEFT";
+
+    switch(self) {
+        case TOP: return "TOP";
+        case BOTTOM: return "BOTTOM";
+        case RIGHT: return "RIGHT";
+        case LEFT: return "LEFT";
+        default: {
+            if(static_cast<int>(self) < static_cast<int>(BorderPlace::UNKNOWN)) return "COMBO";
+            // else fall through >>>
+        }
+        case UNKNOWN: return "UNKNOWN";
     }
 
-    if (static_cast<int>(self) >= static_cast<int>(BorderPlace::UNKNOWN)) {
-        return "UNKNOWN";
-    }
+    // ok common bro what is this :(
 
-    return "COMBO";
+    // if (self == BorderPlace::TOP) {
+    //     return "TOP";
+    // }
+    // if (self == BorderPlace::BOTTOM) {
+    //     return "BOTTOM";
+    // }
+    // if (self == BorderPlace::RIGHT) {
+    //     return "RIGHT";
+    // }
+    // if (self == BorderPlace::LEFT) {
+    //     return "LEFT";
+    // }
+
+    // if (static_cast<int>(self) >= static_cast<int>(BorderPlace::UNKNOWN)) {
+    //     return "UNKNOWN";
+    // }
+
+    // return "COMBO";
 
 }
 

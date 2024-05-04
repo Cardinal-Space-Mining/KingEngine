@@ -3,6 +3,7 @@
 
 #include "nav_msgs/msg/occupancy_grid.hpp"
 
+#include <optional>
 #include <stdexcept>
 #include <limits>
 
