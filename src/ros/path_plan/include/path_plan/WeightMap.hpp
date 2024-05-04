@@ -13,7 +13,7 @@
 
 // Weight Distribution
 
-enum BorderPlace: int{
+enum BorderPlace: int {
 	TOP = 1 << 0,
 	BOTTOM = 1 << 1,
 	RIGHT = 1 <<2,
@@ -27,17 +27,9 @@ const char *to_string(const BorderPlace &self);
 
 inline BorderPlace operator|(BorderPlace a, BorderPlace b)
 {
-    return static_cast<BorderPlace>(static_cast<std::underlying_type_t<BorderPlace>>(a) | static_cast<std::underlying_type_t<BorderPlace>>(b));
+	return static_cast<BorderPlace>(static_cast<std::underlying_type_t<BorderPlace>>(a) | static_cast<std::underlying_type_t<BorderPlace>>(b));
 }
 
-
-using mapsize_t = uint16_t;
-
-using fast_mapsize_t = uint_fast16_t;
-
-using weight_t = uint16_t;
-
-using fweight_t = float;
 
 
 /// <summary>
@@ -47,33 +39,49 @@ using fweight_t = float;
 class WeightMap
 {
 private:
+	struct Node;
+	class NodeCmp;
+public:
+	using mapsize_t = uint16_t;
+	using fast_mapsize_t = uint_fast16_t;
+	using weight_t = uint16_t;
+	using fweight_t = float;
 
-	typedef struct Node
+	using point_t = std::pair<mapsize_t, mapsize_t>;
+	using path_t = std::vector<WeightMap::point_t>;
+	using queue_t = std::priority_queue<Node*, std::vector<Node*>, NodeCmp>;
+
+	static constexpr weight_t
+		DEFAULT_MAX_WEIGHT = 255,
+		DEFAULT_MIN_WEIGHT = 1;
+
+private:
+
+	struct Node
 	{
 		const mapsize_t x;
 		const mapsize_t y;
 		mapsize_t parent_x;
 		mapsize_t parent_y;
 		weight_t weight;
-        fweight_t g;
-        fweight_t h;
+		fweight_t g;
+		fweight_t h;
 
+		Node();
 		Node(const mapsize_t x,
 			const mapsize_t y,
 			const mapsize_t parent_x,
 			const mapsize_t parent_y,
 			const weight_t weight,
 			const fweight_t g,
-            const fweight_t h);
-		Node();
+			const fweight_t h);
 
 		bool operator==(const Node &other);
-	} Node;
 
+	};
 	friend std::ostream &operator<<(std::ostream &os, const Node &n);
 
-	class NodeCmp
-	{
+	class NodeCmp {
 	public:
 		bool operator()(const Node &a, const Node &b);
 		bool operator()(const Node *a, const Node *b);
@@ -87,48 +95,46 @@ private:
 		fweight_t weight_multiplier;
 	};
 
+
 	static constexpr fweight_t SQRT_2 = 1.42f; // Slightly more than actual sqrt2
 	static constexpr WeightMap::NeighborsMove moves[] = {
-		{0 , 1 , 1},
-		{-1, 0 , 1},
-		{0 , -1, 1},
-		{1 , 0 , 1},
+		{0 , 1 , 1.f},
+		{-1, 0 , 1.f},
+		{0 , -1, 1.f},
+		{1 , 0 , 1.f},
 		{1 , 1 , SQRT_2},
 		{-1, 1 , SQRT_2},
 		{-1, -1, SQRT_2},
-		{1 , -1, SQRT_2}};
+		{1 , -1, SQRT_2}
+	};
 	static constexpr size_t numMoves = sizeof(moves) / sizeof(moves[0]);
 
 
 public:
-	using point_t = std::pair<mapsize_t, mapsize_t>;
-	using path_t = std::vector<WeightMap::point_t>;
 
 	// Constructors/Destructors
 	WeightMap(mapsize_t width, mapsize_t height);
-
+	WeightMap(const WeightMap&) = default;
+	WeightMap(WeightMap &&) = default;
+	WeightMap() = delete;
 	~WeightMap() = default;
+
+	auto operator=(WeightMap &) = delete;
+	bool operator==(const WeightMap& other) const;
 
 	// Accessors
 	inline constexpr mapsize_t getWidth() const noexcept
-	{
-		return width;
-	}
+		{ return width; }
 
 	inline constexpr mapsize_t getHeight() const noexcept
-	{
-		return height;
-	}
+		{ return height; }
 
 	inline static constexpr weight_t getMaxWeight() noexcept
-	{
-		return 255;
-	}
+		{ return WeightMap::DEFAULT_MAX_WEIGHT; }
 
 	inline static constexpr weight_t getMinWeight() noexcept
-	{
-		return 1;
-	}
+		{ return WeightMap::DEFAULT_MIN_WEIGHT; }
+
 
 	weight_t getMaxWeightInMap() const;
 
@@ -145,28 +151,18 @@ public:
 
 	path_t getPath(mapsize_t srcX, mapsize_t srcY, mapsize_t dstX, mapsize_t dstY, weight_t turn_cost);
 
-    void spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, mapsize_t radius);
+	void spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, float data_res, float self_res, mapsize_t radius);
 
-    void addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite);
+	void addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite);
 
 	void addCircle(mapsize_t x_in, mapsize_t y_in, mapsize_t radius, weight_t weight, bool gradient, bool overwrite);
 
-    void addRectangle(mapsize_t x_in, mapsize_t y_in, mapsize_t w_in, mapsize_t h_in, weight_t weight, mapsize_t radius, bool overwrite);
-
-    WeightMap(WeightMap &) = default;
-
-	WeightMap() = delete;
-
-	auto operator=(WeightMap &) = delete;
-
-	WeightMap(WeightMap &&) = default;
+	void addRectangle(mapsize_t x_in, mapsize_t y_in, mapsize_t w_in, mapsize_t h_in, weight_t weight, mapsize_t radius, bool overwrite);
 
 	bool isValidPoint(int32_t x, int32_t y) const;
 
 	static inline bool isValidWeight(weight_t weight)
-	{
-		return weight <= WeightMap::getMaxWeight() && weight >= WeightMap::getMinWeight();
-	}
+		{ return weight <= WeightMap::getMaxWeight() && weight >= WeightMap::getMinWeight(); }
 
 	weight_t* getWeights() const;
 
@@ -178,13 +174,10 @@ public:
 
 	static WeightMap deserialize(std::pair<const char*, const size_t> bytes);
 
-	bool operator==(const WeightMap& other) const;
-
 	size_t hash() const;
 
+
 private:
-	// Helper Functions
-	using queue_t = std::priority_queue<Node *, std::vector<Node *>, NodeCmp>;
 
 	void resetMap();
 
@@ -196,6 +189,7 @@ private:
 
 	fweight_t get_linear_cost(Node& a, Node& b);
 
+
 private:
 	// Class Fields
 	const mapsize_t width;
@@ -203,13 +197,13 @@ private:
 
 	//Indexed in x-y form
 	BlockArray2DRT<Node> arr;
-};
+
+};	// WeightMap
 
 template <>
 struct std::hash<WeightMap>
 {
-  std::size_t inline operator()(const WeightMap& k) const
-  {
-    return k.hash();
-  }
+	std::size_t inline operator()(const WeightMap& k) const
+		{ return k.hash(); }
+
 };
