@@ -12,9 +12,9 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
 
-find_package(OpenCV)
-if(OpenCV_FOUND)
+if(OpenCV_FOUND)  # keeping this even though its now required
   MESSAGE(STATUS "OpenCV installation found")
   add_compile_definitions(HAVE_OPENCV)
   include_directories(${OpenCV_INCLUDE_DIRS})
@@ -22,16 +22,17 @@ else()
   MESSAGE(STATUS "OpenCV installation not found")
 endif()
 
-add_executable(main src/main.cpp src/path_plan/pathplan.cpp src/path_plan/WeightMap.cpp)
+add_executable(main src/main.cpp src/path_plan/pathplan.cpp)
 ament_target_dependencies(main rclcpp nav_msgs geometry_msgs)
 
 if(OpenCV_FOUND)
   target_link_libraries(main ${OpenCV_LIBS})
 endif()
 
-target_include_directories(main PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
+target_include_directories(main
+  # PUBLIC
+  #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  #   $<INSTALL_INTERFACE:include>
   PRIVATE ${EIGEN3_INCLUDE_DIR})
 target_compile_features(main PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 

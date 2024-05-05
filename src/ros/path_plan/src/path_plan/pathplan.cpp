@@ -1,199 +1,166 @@
-#include "path_plan/pathplan.hpp"
+/*******************************************************************************
+*   Copyright (C) 2024 Cardinal Space Mining Club                              *
+*                                                                              *
+*   Unless required by applicable law or agreed to in writing, software        *
+*   distributed under the License is distributed on an "AS IS" BASIS,          *
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   *
+*   See the License for the specific language governing permissions and        *
+*   limitations under the License.                                             *
+*                                                                              *
+*                                ;xxxxxxx:                                     *
+*                               ;$$$$$$$$$       ...::..                       *
+*                               $$$$$$$$$$x   .:::::::::::..                   *
+*                            x$$$$$$$$$$$$$$::::::::::::::::.                  *
+*                        :$$$$$&X;      .xX:::::::::::::.::...                 *
+*                .$$Xx++$$$$+  :::.     :;:   .::::::.  ....  :                *
+*               :$$$$$$$$$  ;:      ;xXXXXXXXx  .::.  .::::. .:.               *
+*              :$$$$$$$$: ;      ;xXXXXXXXXXXXXx: ..::::::  .::.               *
+*             ;$$$$$$$$ ::   :;XXXXXXXXXXXXXXXXXX+ .::::.  .:::                *
+*              X$$$$$X : +XXXXXXXXXXXXXXXXXXXXXXXX; .::  .::::.                *
+*               .$$$$ :xXXXXXXXXXXXXXXXXXXXXXXXXXXX.   .:::::.                 *
+*                X$$X XXXXXXXXXXXXXXXXXXXXXXXXXXXXx:  .::::.                   *
+*                $$$:.XXXXXXXXXXXXXXXXXXXXXXXXXXX  ;; ..:.                     *
+*                $$& :XXXXXXXXXXXXXXXXXXXXXXXX;  +XX; X$$;                     *
+*                $$$::XXXXXXXXXXXXXXXXXXXXXX: :XXXXX; X$$;                     *
+*                X$$X XXXXXXXXXXXXXXXXXXX; .+XXXXXXX; $$$                      *
+*                $$$$ ;XXXXXXXXXXXXXXX+  +XXXXXXXXx+ X$$$+                     *
+*              x$$$$$X ;XXXXXXXXXXX+ :xXXXXXXXX+   .;$$$$$$                    *
+*             +$$$$$$$$ ;XXXXXXx;;+XXXXXXXXX+    : +$$$$$$$$                   *
+*              +$$$$$$$$: xXXXXXXXXXXXXXX+      ; X$$$$$$$$                    *
+*               :$$$$$$$$$. +XXXXXXXXX:      ;: x$$$$$$$$$                     *
+*               ;x$$$$XX$$$$+ .;+X+      :;: :$$$$$xX$$$X                      *
+*              ;;;;;;;;;;X$$$$$$$+      :X$$$$$$&.                             *
+*              ;;;;;;;:;;;;;x$$$$$$$$$$$$$$$$x.                                *
+*              :;;;;;;;;;;;;.  :$$$$$$$$$$X                                    *
+*               .;;;;;;;;:;;    +$$$$$$$$$                                     *
+*                 .;;;;;;.       X$$$$$$$:                                     *
+*                                                                              *
+*******************************************************************************/
 
+#include "pathplan.hpp"
 
-using std::placeholders::_1;
+#include <chrono>
+#include <functional>
+#include <optional>
+#include <utility>
+
+// #define HAVE_OPENCV
+#ifdef HAVE_OPENCV
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#endif
 
 
 PathPlanNode::PathPlanNode(
-	double robot_width_m,
-	double arena_x_m,
-	double arena_y_m,
-	double cell_resolution,
+	float robot_width_m,
 	int turn_cost
 ) :
 	Node("path_plan"),
 	robot_width{robot_width_m},
-	// arena_size{arena_x_m, arena_y_m},
-	cell_resolution{cell_resolution},
-	turn_cost{turn_cost},
-	current_map{
-		arena_x_m / cell_resolution,
-		arena_y_m / cell_resolution
-	}
+	turn_cost{turn_cost}
 {
+	RCLCPP_INFO(this->get_logger(), "PathPlan Node Initialization!");
+
 	// subscribers
-	lidar_data_sub = this->create_subscription<nav_msgs::msg::OccupancyGrid>("/ldrp/obstacle_grid", 10,
-		std::bind(&PathPlanNode::lidar_change_cb, this, _1));
-	location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("/uesim/pose", 10,
-		std::bind(&PathPlanNode::location_change_cb, this, _1));
-	dest_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("destination", 10,
-		std::bind(&PathPlanNode::destination_change_cb, this, _1));
+	lidar_data_sub = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
+		"/ldrp/obstacle_grid", 10,
+		std::bind(&PathPlanNode::lidar_change_cb, this, std::placeholders::_1)
+	);
+	location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>(
+		"/uesim/pose", 10,
+		std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1)
+	);
+	dest_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>(
+		"/destination", 10,
+		std::bind(&PathPlanNode::destination_change_cb, this, std::placeholders::_1)
+	);
 
 	// publishers
-	path_pub = this->create_publisher<nav_msgs::msg::Path>("path", 10);
-	weight_map_pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>("weight_map", 10);
+	path_pub = this->create_publisher<nav_msgs::msg::Path>( "/pathplan/path", 10 );
+	weight_map_pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>( "/pathplan/nav_map", 10 );
 
-	// add params (for turn cost, arena size)
-
-	// default init
-	// this->map_init();	// don't need this
-	this->publish_map();
+	// add params? (for turn cost, robot width)
 }
 
 
-void PathPlanNode::map_init() {		// might need to nuke this
-	current_map.addBorder(
-		(this->robot_width / this->cell_resolution),
-		WeightMap::getMaxWeight(),
-		(BorderPlace::BOTTOM | BorderPlace::LEFT | BorderPlace::RIGHT | BorderPlace::TOP),
-		true,	// gradient
-		false	// overwrite
-	);
-}
-
-PathPlanNode::optional_point PathPlanNode::to_mapsize_ints(double x, double y) {
-	const int
-		x_translated = static_cast<int>(x / this->cell_resolution),
-		y_translated = static_cast<int>(y / this->cell_resolution);
-
-	if (x_translated < 0 || x_translated > std::numeric_limits<uint16_t>::max()) {
-		// x doesn't fit into a uint16_t
-		return std::nullopt;
-	}
-	if (y_translated < 0 || y_translated > std::numeric_limits<uint16_t>::max()) {
-		// y doesn't fit into a uint16_t
-		return std::nullopt;
-	}
-
-	return std::make_optional<PathPlanNode::point>(
-		static_cast<uint16_t>(x_translated),
-		static_cast<uint16_t>(y_translated)
-	);
-}
-
-PathPlanNode::optional_path PathPlanNode::update_path() {
-	if (current_location.has_value() && destination.has_value()) {
-		auto src = current_location.value();
-		auto dst = current_location.value();
-		try {
-			return
-				current_map.getPath(
-					src.first, src.second,
-					dst.first, dst.second,
-					turn_cost
-				);
-		} catch (const std::invalid_argument &e) {
-			// todo might want to log errors
-			return std::nullopt;
-		}
-	}
-	return std::nullopt;
-}
-
-void PathPlanNode::publish_path(path& path) {
-	nav_msgs::msg::Path ros_path;
-	ros_path.poses.resize(path.size());
-
-	for (size_t i = 0; i < path.size(); i++)
-	{
-		geometry_msgs::msg::PoseStamped& p = ros_path.poses[i];
-		p.pose.position.x = static_cast<double>(path[i].first);
-		p.pose.position.y = static_cast<double>(path[i].second);
-		p.pose.position.z = 0.0;
-	}
-
-	this->path_pub->publish(ros_path);
-}
-
-void PathPlanNode::publish_map() {
-	auto msg = nav_msgs::msg::OccupancyGrid();
-
-	WeightMap::mapsize_t
-		_w = current_map.getWidth(),
-		_h = current_map.getHeight(),
-		_area = _w * _h;
-
-	msg.info.width = _w;
-	msg.info.height = _h;
-	msg.info.resolution = this->cell_resolution;
-
-	msg.info.origin.position.x = 0.0;
-	msg.info.origin.position.y = 0.0;
-	msg.info.origin.position.z = 0.0;
-	msg.info.origin.orientation.x = 0.0;
-	msg.info.origin.orientation.y = 0.0;
-	msg.info.origin.orientation.z = 0.0;
-	msg.info.origin.orientation.w = 1.0;
-
-	msg.data.resize(_area, 0);
-
-	auto weights = current_map.getWeights();
-	for (int i = 0; i < _area; i++)
-		msg.data[i] = weights[i] * (100.0f / current_map.getMaxWeight());
-	delete[] weights;	// TODO: FIX THIS!!!
-
-	msg.header.stamp = this->get_clock()->now();
-	msg.header.frame_id = "world";  // changed this to 'world' so its the same as other nodes
-
-	// msg.info.map_load_time = this->get_clock()->now();
-
-	this->weight_map_pub->publish(msg);
-
-	RCLCPP_INFO(this->get_logger(), "Published map");
-}
 
 void PathPlanNode::lidar_change_cb(const nav_msgs::msg::OccupancyGrid& map) {
-	RCLCPP_INFO(this->get_logger(), "%s" ,"Recieved lidar data");
+	RCLCPP_INFO(this->get_logger(), "Recieved lidar data");
 
-	current_map.spreadDataArray(
-		map.data.data(),
-		map.info.origin.position.x,
-		map.info.origin.position.y,
-		map.info.width,
-		map.info.height,
-		map.info.resolution,
-		this->cell_resolution,
-		(this->robot_width * 0.5 / this->cell_resolution)
+	this->weights = map;	// copy occupancy grid directly since we can simply replace our old data
+
+#ifdef HAVE_OPENCV
+
+	std::chrono::high_resolution_clock::time_point _t = std::chrono::high_resolution_clock::now();
+
+	const int
+		_w = static_cast<int>(this->weights.info.width),
+		_h = static_cast<int>(this->weights.info.height);
+
+	cv::Mat _data{ _h, _w, CV_8UC1, this->weights.data.data() };
+	cv::Mat _dest = cv::Mat::zeros(cv::Size{ _w, _h }, CV_8UC1);
+
+	const int
+		kernel_diam = static_cast<int>(this->robot_width / this->weights.info.resolution) + 1;	// actual computation requires half of robot width / res * 2 for diam, but the 0.5 and 2 cancel
+	const cv::Size
+		kernel_size{ kernel_diam, kernel_diam };
+
+	cv::dilate(
+		_data,
+		_dest,
+		cv::getStructuringElement(cv::MORPH_ELLIPSE, kernel_size)
+	);
+	cv::GaussianBlur(
+		_dest,
+		_data,
+		kernel_size,
+		10, 10,
+		cv::BorderTypes::BORDER_CONSTANT
 	);
 
-	auto path = this->update_path();	// check for time
-	if (path.has_value()) {
-		this->publish_path(path.value());
-	}
+	RCLCPP_INFO(this->get_logger(),
+		"Weightmap globulization operation completed in %f seconds.",
+		std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - _t).count()
+	);
 
-	this->publish_map();
+#else
+
+	RCLCPP_INFO(this->get_logger(), "Could not globulize weights since OpenCV is not included.");
+
+#endif
+
+	this->weight_map_pub->publish(this->weights);
+
+	this->recalc_path_and_export();
+
 }
 
 void PathPlanNode::location_change_cb(const geometry_msgs::msg::PoseStamped& msg) {
-	const double
-		_x = msg.pose.position.x,
-		_y = msg.pose.position.y;
 
-	RCLCPP_INFO(this->get_logger(), "Recieved new location: (%F, %F)", _x, _y);
+	this->current_pose = msg.pose;
 
-	// auto path = ros_bridge::on_location_change(_x, _y);
-	auto new_location = this->to_mapsize_ints(_x, _y);
-	if (new_location.has_value()) current_location = new_location;
+	RCLCPP_INFO(this->get_logger(), "Recieved new location: (%F, %F)", this->current_pose.position.x, this->current_pose.position.y);
 
-	auto path = this->update_path();	// check for time
-	if (path.has_value()){
-		this->publish_path(path.value());
-	}
+	this->recalc_path_and_export();
+
 }
 
 void PathPlanNode::destination_change_cb(const geometry_msgs::msg::PoseStamped& msg) {
-	const double
-		_x = msg.pose.position.x,
-		_y = msg.pose.position.y;
 
-	RCLCPP_INFO(this->get_logger(), "Recieved new destination: (%F, %F)", _x, _y);
-	
-	// auto path = ros_bridge::on_destination_change(_x, _y);
-	auto new_destination = this->to_mapsize_ints(_x, _y);
-	if (new_destination.has_value()) current_location = new_destination;
+	this->target_pose = msg.pose;
 
-	auto path = this->update_path();	// check for time
-	if (path.has_value()){
-		this->publish_path(path.value());
-	}
+	RCLCPP_INFO(this->get_logger(), "Recieved new destination: (%F, %F)", this->target_pose.position.x, this->target_pose.position.y);
+
+	this->recalc_path_and_export();
+
+}
+
+void PathPlanNode::recalc_path_and_export() {
+
+	nav_msgs::msg::Path ros_path{};
+
+	// navigation!
+
+	this->path_pub->publish(ros_path);
+
 }

@@ -1,5 +1,5 @@
 // Project Includes
-#include "path_plan/WeightMap.hpp"
+#include "WeightMap.hpp"
 
 #include <limits>     //std::numeric_limits
 #include <algorithm> //std::min
@@ -12,10 +12,10 @@
 #include <functional>
 #include <cassert>
 
-#ifdef HAVE_OPENCV
+// #ifdef HAVE_OPENCV
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-#endif
+// #endif
 
 // Node Constructor
 WeightMap::Node::Node(const mapsize_t x_in,
@@ -353,7 +353,7 @@ WeightMap::path_t WeightMap::getPathToX(mapsize_t srcX, mapsize_t srcY, mapsize_
 
 void WeightMap::spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, float data_res, float self_res, mapsize_t radius) {
 // #ifdef HAVE_OPENCV
-#if 0
+#if 1
 	(void)data_res;
 	(void)self_res;
 
