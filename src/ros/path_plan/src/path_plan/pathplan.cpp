@@ -43,6 +43,9 @@
 #include <functional>
 #include <optional>
 #include <utility>
+#include <vector>
+
+#include <Eigen/Core>
 
 // #define HAVE_OPENCV
 #ifdef HAVE_OPENCV
@@ -53,31 +56,36 @@
 
 PathPlanNode::PathPlanNode(
 	float robot_width_m,
-	int turn_cost
+	int turn_cost,
+	int min_weight
 ) :
 	Node("path_plan"),
 	robot_width{robot_width_m},
-	turn_cost{turn_cost}
+	turn_cost{turn_cost},
+	min_weight{min_weight}
 {
 	RCLCPP_INFO(this->get_logger(), "PathPlan Node Initialization!");
 
 	// subscribers
 	lidar_data_sub = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
-		"/ldrp/obstacle_grid", 10,
+		"/ldrp/obstacle_grid", 1,
 		std::bind(&PathPlanNode::lidar_change_cb, this, std::placeholders::_1)
 	);
 	location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-		"/uesim/pose", 10,
+		"/uesim/pose", 1,
 		std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1)
 	);
 	dest_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-		"/destination", 10,
+		"/destination", 1,
 		std::bind(&PathPlanNode::destination_change_cb, this, std::placeholders::_1)
 	);
 
 	// publishers
-	path_pub = this->create_publisher<nav_msgs::msg::Path>( "/pathplan/path", 10 );
-	weight_map_pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>( "/pathplan/nav_map", 10 );
+	path_pub = this->create_publisher<nav_msgs::msg::Path>( "/pathplan/nav_path", 1 );
+	weight_map_pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>( "/pathplan/nav_map", 1 );
+
+	this->target_pose.position.x = 11.5;
+	this->target_pose.position.y = -4.2;
 
 	// add params? (for turn cost, robot width)
 }
@@ -85,7 +93,7 @@ PathPlanNode::PathPlanNode(
 
 
 void PathPlanNode::lidar_change_cb(const nav_msgs::msg::OccupancyGrid& map) {
-	RCLCPP_INFO(this->get_logger(), "Recieved lidar data");
+	// RCLCPP_INFO(this->get_logger(), "Recieved lidar data");
 
 	this->weights = map;	// copy occupancy grid directly since we can simply replace our old data
 
@@ -117,6 +125,11 @@ void PathPlanNode::lidar_change_cb(const nav_msgs::msg::OccupancyGrid& map) {
 		10, 10,
 		cv::BorderTypes::BORDER_CONSTANT
 	);
+	cv::max(
+		_data,
+		cv::Scalar::all(this->min_weight),
+		_data
+	);
 
 	RCLCPP_INFO(this->get_logger(),
 		"Weightmap globulization operation completed in %f seconds.",
@@ -139,9 +152,9 @@ void PathPlanNode::location_change_cb(const geometry_msgs::msg::PoseStamped& msg
 
 	this->current_pose = msg.pose;
 
-	RCLCPP_INFO(this->get_logger(), "Recieved new location: (%F, %F)", this->current_pose.position.x, this->current_pose.position.y);
+	// RCLCPP_INFO(this->get_logger(), "Recieved new location: (%F, %F)", this->current_pose.position.x, this->current_pose.position.y);
 
-	this->recalc_path_and_export();
+	// this->recalc_path_and_export();	// don't need to recalc since we are likely following the path (also lidar will be updating this as well)
 
 }
 
@@ -149,7 +162,7 @@ void PathPlanNode::destination_change_cb(const geometry_msgs::msg::PoseStamped& 
 
 	this->target_pose = msg.pose;
 
-	RCLCPP_INFO(this->get_logger(), "Recieved new destination: (%F, %F)", this->target_pose.position.x, this->target_pose.position.y);
+	// RCLCPP_INFO(this->get_logger(), "Recieved new destination: (%F, %F)", this->target_pose.position.x, this->target_pose.position.y);
 
 	this->recalc_path_and_export();
 
@@ -159,7 +172,45 @@ void PathPlanNode::recalc_path_and_export() {
 
 	nav_msgs::msg::Path ros_path{};
 
-	// navigation!
+	std::chrono::high_resolution_clock::time_point _t = std::chrono::high_resolution_clock::now();
+
+	std::vector<Eigen::Vector2<int64_t>>
+		path = this->nav_map.navigate<uint8_t, false>(
+			reinterpret_cast<uint8_t*>(this->weights.data.data()),
+			this->weights.info.width,
+			this->weights.info.height,
+			this->weights.info.origin.position.x,
+			this->weights.info.origin.position.y,
+			this->weights.info.resolution,
+			this->current_pose.position.x,
+			this->current_pose.position.y,
+			this->target_pose.position.x,
+			this->target_pose.position.y,
+			this->turn_cost
+		);
+
+	ros_path.poses.resize(path.size());
+	ros_path.header.stamp = this->get_clock()->now();
+	ros_path.header.frame_id = "world";
+	for(size_t i = 0; i < path.size(); i++) {
+		ros_path.poses[i].pose.position.x = path[i].x() * this->weights.info.resolution + this->weights.info.origin.position.x;
+		ros_path.poses[i].pose.position.y = path[i].y() * this->weights.info.resolution + this->weights.info.origin.position.y;
+		ros_path.poses[i].pose.position.z = 0.0;
+		ros_path.poses[i].pose.orientation.w = 1.0;
+		ros_path.poses[i].pose.orientation.x = 0.0;
+		ros_path.poses[i].pose.orientation.y = 0.0;
+		ros_path.poses[i].pose.orientation.z = 0.0;
+		ros_path.poses[i].header.stamp = ros_path.header.stamp;
+		ros_path.poses[i].header.frame_id = "world";
+	}
+
+	if(path.size() > 0) {
+		RCLCPP_INFO(this->get_logger(),
+			"Successfully recalculated path in %f seconds with %ld segments.",
+			std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - _t).count(),
+			path.size()
+		);
+	}
 
 	this->path_pub->publish(ros_path);
 

@@ -7,6 +7,8 @@
 #include <utility>
 #include <queue>
 #include <functional>
+#include <algorithm>
+// #include <iostream>
 
 #include <Eigen/Core>
 
@@ -58,50 +60,49 @@ namespace GridUtils {
 		}
 	}
 
-	/** Copy a 2d windows of elemens - expects element types to be POD (templated on major-order) */
-	template<typename T, bool X_Major = false, typename IntT = int, size_t T_Bytes = sizeof(T)>
-	static void memcpyWindow(
-		T* dest, const T* src,
-		const Eigen::Vector2<IntT>& dest_size, const Eigen::Vector2<IntT>& src_size,
-		const Eigen::Vector2<IntT>& diff
-	) {
-		if constexpr(X_Major) {
-			for(int64_t _x = 0; _x < src_size.x(); _x++) {	// iterate through source "rows" of contiguous memory (along y -- for each x)
-				memcpy(
-					dest + ((_x + diff.x()) * dest_size.y() + diff.y()),
-					src + (_x * src_size.y()),
-					src_size.y() * T_Bytes
-				);
-			}
-		} else {
-			for(int64_t _y = 0; _y < src_size.y(); _y++) {	// iterate through source "rows" of contiguous memory (along x -- for each y)
-				memcpy(
-					dest + ((_y + diff.y()) * dest_size.x() + diff.x()),
-					src + (_y * src_size.x()),
-					src_size.x() * T_Bytes
-				);
-			}
-		}
+	/** Check if v is GEQ than min and LESS than max */
+	template<typename IntT = int>
+	inline static bool inRange(const Eigen::Vector2<IntT>& v, const Eigen::Vector2<IntT>& min, const Eigen::Vector2<IntT>& max) {
+		return (
+			min.x() <= v.x() && v.x() < max.x() &&
+			min.y() <= v.y() && v.y() < max.y()
+		);
 	}
 
 };
 
+/** constexpr conditional value (v1 = true val, v2 = false val) */
+template<bool _test, typename T, T tV, T fV>
+struct conditional_literal {
+	static constexpr T value = tV;
+};
+template<typename T, T tV, T fV>
+struct conditional_literal<false, T, tV, fV> {
+	static constexpr T value = fV;
+};
 
-namespace v2 {
+
 
 /** A container for nodes. Size, resolution, origin, etc. are stored externally and passed in to all helper functions (below) */
 template<
-	typename mapsize_t = size_t,
+	typename mapsize_t = int64_t,
 	typename fweight_t = float>
-struct NodeGraph {
+class NavMap {
+public:
+	static_assert(std::is_integral<mapsize_t>::value, "");
 	static_assert(std::is_floating_point<fweight_t>::value, "");
 
 	using MSize_T = mapsize_t;
 	using FWeight_T = fweight_t;
-	using This_T = NodeGraph<mapsize_t, fweight_t>;
+	using This_T = NavMap<mapsize_t, fweight_t>;
+
+	using Vec2m = Eigen::Vector2<mapsize_t>;	// represents a location on the map
+	using NodeMove = std::tuple<Vec2m, fweight_t>;
+	// using Path = Eigen::Matrix2X<mapsize_t>;
+	using Path = std::vector<Vec2m>;
 
 	struct Node {
-		mapsize_t	// changed to 1D indexes
+		mapsize_t	// changed to 1D indexes to be more compact
 			self_idx,
 			parent_idx;
 		fweight_t
@@ -115,185 +116,292 @@ struct NodeGraph {
 
 	static constexpr double
 		SQRT_2 = 1.41421356;
-	static constexpr std::tuple<int8_t, int8_t, fweight_t> MOVES[] = {
-		{0 , 1 , 1.f},
-		{-1, 0 , 1.f},
-		{0 , -1, 1.f},
-		{1 , 0 , 1.f},
-		{1 , 1 , SQRT_2},
-		{-1, 1 , SQRT_2},
-		{-1, -1, SQRT_2},
-		{1 , -1, SQRT_2}
+	inline static const NodeMove MOVES[] = {
+		{Vec2m{0 , 1} , 1.f},
+		{Vec2m{-1, 0} , 1.f},
+		{Vec2m{0 , -1}, 1.f},
+		{Vec2m{1 , 0} , 1.f},
+		{Vec2m{1 , 1} , SQRT_2},
+		{Vec2m{-1, 1} , SQRT_2},
+		{Vec2m{-1, -1}, SQRT_2},
+		{Vec2m{1 , -1}, SQRT_2}
 	};
 	static constexpr size_t
 		NUM_MOVES = sizeof(MOVES) / sizeof(MOVES[0]);
+	static constexpr mapsize_t
+		INVALID_IDX = conditional_literal<
+			std::is_signed<mapsize_t>::value,
+			mapsize_t,
+			static_cast<mapsize_t>(-1),
+			std::numeric_limits<mapsize_t>::max()
+		>::value;	// use -1 for signed types (more robust), max value for unsigned
 
-	std::vector<Node> map;
 
+public:
+	/** Call resize() to setup the nodes */
+	NavMap() = default;
+	~NavMap() = default;
 
-// static workers
+	/** Resizes the vector of nodes and assigns member indices for each newly added instance */
+	This_T& resize(size_t len) {	// enforces nodes always having their index self-assigned since this is the only way the internal array can be resized
+		size_t i = this->size();
+		this->map.resize(len);
 
-	static inline void clearNodes(This_T& graph) {
-		memset(graph.map.data(), 0x00, graph.map.size() * sizeof(typename decltype(graph)::Node));
+		for(; i < len; i++) this->map[i].self_idx = static_cast<mapsize_t>(i);
+
+		return *this;
 	}
 
-	template<typename IntT = int, bool X_Major = false>
-	fweight_t get_linear_cost(
-		const uint8_t* weights,
+	/** Erases all data. */
+	inline This_T& clear() {
+		this->map.clear();
+		return *this;
+	}
+
+	/** Get the number of nodes currently stored. */
+	inline size_t size() const {
+		return this->map.size();
+	}
+
+	template<typename WeightT = uint8_t, bool X_Major = false>
+	This_T::Path navigate(
+		const WeightT* weights,
+		mapsize_t wsize_x, mapsize_t wsize_y,
+		double worigin_x, double worigin_y,
+		double cell_resolution,
+		double start_x, double start_y,
+		double end_x, double end_y,
+		WeightT turn_cost = static_cast<WeightT>(1)
+	) {
+		const Eigen::Vector2d
+			origin{ worigin_x, worigin_y };
+		const This_T::Vec2m
+			wsize{ wsize_x, wsize_y },
+			start = GridUtils::gridAlign<mapsize_t, double>(start_x, start_y, origin, cell_resolution),
+			end = GridUtils::gridAlign<mapsize_t, double>(end_x, end_y, origin, cell_resolution);
+
+		return this->navigate<WeightT, X_Major, mapsize_t>(
+			weights,
+			wsize,
+			start,
+			end,
+			turn_cost
+		);
+	}
+
+	/** Navigate a provided weightmap, starting from and ending at the given cell locations */
+	template<typename WeightT = uint8_t, bool X_Major = false, typename IntT = mapsize_t>
+	This_T::Path navigate(
+		const WeightT* weights,
 		const Eigen::Vector2<IntT>& wsize,
-		const Eigen::Vector2<IntT>& a,
-		const Eigen::Vector2<IntT>& b
+		const Eigen::Vector2<IntT>& start,
+		const Eigen::Vector2<IntT>& end,
+		const WeightT turn_cost = static_cast<WeightT>(1)
+	) {
+		const int64_t
+			_area = static_cast<int64_t>(wsize.x()) * wsize.y(),
+			_start_idx = GridUtils::gridIdx<X_Major, IntT>(start, wsize),
+			_end_idx = GridUtils::gridIdx<X_Major, IntT>(end, wsize);
+		static const Eigen::Vector2<IntT>
+			_zero = Eigen::Vector2<IntT>::Zero();
+
+		// std::cout << "nav init >> area: " << _area << ", start idx: " << _start_idx << ", end idx: " << _end_idx << std::endl;
+
+		if(
+			!GridUtils::inRange<IntT>(start, _zero, wsize) ||
+			!GridUtils::inRange<IntT>(end, _zero, wsize) ||
+			(_start_idx == _end_idx)
+		) return This_T::Path{};	// empty path
+
+		this->resize(_area);
+		for(size_t i = 0; i < this->map.size(); i++) {
+			this->map[i].h = static_cast<fweight_t>(
+				(end - GridUtils::gridLoc<X_Major, IntT>(i, wsize)).norm()	// "length" of the difference
+			);
+			this->map[i].g = std::numeric_limits<fweight_t>::infinity();
+			this->map[i].parent_idx = This_T::INVALID_IDX;
+		}
+
+		This_T::Node& _start_node = this->map[_start_idx];
+		_start_node.g = static_cast<fweight_t>(0);
+
+		std::vector<This_T::Node*> queue_backer;
+		queue_backer.reserve( static_cast<size_t>(_area) );
+
+		std::priority_queue<This_T::Node*, std::vector<This_T::Node*>, This_T::NodeCmp> queue{ This_T::NodeCmp{}, std::move(queue_backer) };
+		queue.push(&_start_node);
+
+		while(!queue.empty()) {
+			This_T::Node& _node = *queue.top();
+			queue.pop();
+
+			if(_node.self_idx == _end_idx) {
+				// backtrace path
+				This_T::Path path{};
+				const This_T::Node* _itr_node = &_node;
+				while(_itr_node->parent_idx != This_T::INVALID_IDX) {
+					path.emplace_back( GridUtils::gridLoc<X_Major, IntT>(_itr_node->self_idx, wsize).template cast<mapsize_t>() );
+					_itr_node = &this->map[_itr_node->parent_idx];
+				}
+				// assert size
+				path.emplace_back( GridUtils::gridLoc<X_Major, IntT>(_itr_node->self_idx, wsize).template cast<mapsize_t>() );
+				std::reverse(path.begin(), path.end());
+				return path;
+
+			} else {
+				// make moves -- I didn't split out this method because we only have a single navigation method currently
+				const Eigen::Vector2<IntT>
+					_loc = GridUtils::gridLoc<X_Major, IntT>(_node.self_idx, wsize);
+				for(size_t i = 0; i < This_T::NUM_MOVES; i++) {
+
+					const Eigen::Vector2<IntT> _neighbor_loc = _loc + (std::get<0>(This_T::MOVES[i]).template cast<IntT>());
+					if(!GridUtils::inRange<IntT>(_neighbor_loc, _zero, wsize)) continue;
+
+					const int64_t _idx = GridUtils::gridIdx<X_Major, IntT>(_neighbor_loc, wsize);
+					This_T::Node& _neighbor = this->map[_idx];
+
+					const fweight_t pivot_cost = turn_cost + _node.g + std::get<1>(This_T::MOVES[i]) * (weights[_node.self_idx] + weights[_neighbor.self_idx]) * 0.5;
+
+					if(pivot_cost < _neighbor.g) {
+						if(_node.parent_idx != This_T::INVALID_IDX) {
+							This_T::Node& _parent = this->map[_node.parent_idx];
+							const fweight_t direct_cost =
+								_parent.g +
+								this->get_linear_cost<WeightT, X_Major, IntT>(
+									weights,
+									wsize,
+									_parent.self_idx,
+									_neighbor.self_idx
+								);
+							if(direct_cost <= pivot_cost) {
+								_neighbor.parent_idx = _parent.self_idx;
+								_neighbor.g = direct_cost;
+								queue.push(&_neighbor);
+								continue;
+							}
+						}
+						_neighbor.parent_idx = _node.self_idx;
+						_neighbor.g = pivot_cost;
+						queue.push(&_neighbor);
+					}
+
+				}
+			}
+		}
+
+		return This_T::Path{};	// failure, but handle gracefully by returning an empty path
+	}
+
+protected:
+
+	template<typename WeightT = uint8_t, bool X_Major = false, typename IntT = mapsize_t>
+	fweight_t get_linear_cost(
+		const WeightT* weights,
+		const Eigen::Vector2<IntT>& wsize,
+		const mapsize_t a_idx,
+		const mapsize_t b_idx
 	) {
 		fweight_t sum = static_cast<fweight_t>(0);
 
-		const int64_t
-			a_idx = GridUtils::gridIdx<X_Major, IntT>(a, wsize),
-			b_idx = GridUtils::gridIdx<X_Major, IntT>(b, wsize),
-			area = wsize.x() * wsize.y();
+		const int64_t _area = wsize.x() * wsize.y();
+		const Eigen::Vector2<IntT>
+			_a = GridUtils::gridLoc<X_Major, IntT>(a_idx, wsize),
+			_b = GridUtils::gridLoc<X_Major, IntT>(b_idx, wsize),
+			_diff = _b - _a,
+			_min = _b.cwiseMin(_a),
+			_max = _b.cwiseMax(_a);
 
-		if(area == 0 || a_idx >= area || b_idx >= area || a_idx == b_idx) return sum;
+		if(_area == 0 || a_idx >= _area || b_idx >= _area || a_idx == b_idx) return sum;
 
-		if(a.x() == b.x()) {
+		if(_a.x() == _b.x()) {
 			sum += (static_cast<fweight_t>(weights[a_idx]) + weights[b_idx]) / 2;
-			for(mapsize_t y = std::min(a.y(), b.y()) + 1; y < std::max(a.y(), b.y()); y++) {
-				sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(a.x(), y, wsize)] );
+			for(IntT y = _min.y() + 1; y < _max.y(); y++) {
+				sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_a.x(), y, wsize)] );
 			}
 			return sum;
 		}
 
-		if(a.y() == b.y()) {
+		if(_a.y() == _b.y()) {
 			sum += (static_cast<fweight_t>(weights[a_idx]) + weights[b_idx]) / 2;
-			for(mapsize_t x = std::min(a.x(), b.x()) + 1; x < std::max(a.x(), b.x()); x++) {
-				sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(x, a.y(), wsize)] );
+			for(IntT x = _min.x() + 1; x < _max.x(); x++) {
+				sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(x, _a.y(), wsize)] );
 			}
 			return sum;
 		}
 
-		const IntT
-			diff_x = b.x() - a.x(),
-			diff_y = b.y() - a.y();
-		const int64_t
-			sgn = diff_x * diff_y > 0 ? 1 : -1;
+		const int64_t sgn = _diff.x() * _diff.y() > 0 ? 1 : -1;
+		const Eigen::Vector2<IntT>& x_start = _a.x() < _b.x() ? _a : _b;
 
-		if(std::abs(diff_x) == std::abs(diff_y)) {
+		if(std::abs(_diff.x()) == std::abs(_diff.y())) {
 			sum += (static_cast<fweight_t>(weights[a_idx]) + weights[b_idx]) / 2;
-			const Eigen::Vector2<IntT>& _start = a.x() < b.x() ? a : b;
-			for(mapsize_t i = 1; i < std::abs(diff_x); i++) {
-				sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_start.x() + i, _start.y() + sgn * i, wsize)] );
+			for(mapsize_t i = 1; i < std::abs(_diff.x()); i++) {
+				sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(x_start.x() + i, x_start.y() + sgn * i, wsize)] );
 			}
-			return sum * SQRT_2;
+			return sum * This_T::SQRT_2;
 		}
 
-		const float _m = static_cast<float>(diff_y) / diff_x;
+		float _m = std::abs( static_cast<float>(_diff.y()) / _diff.x() );
 
 		if(_m < 1.0) {
 
+			const Eigen::Vector2<IntT>& x_end = _a.x() > _b.x() ? _a : _b;
+			Eigen::Vector2<IntT> _p = x_start;
+
+			sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] ) * 0.5;
+
+			float err = _m / 2.0;
+			for(_p.x() += 1; _p.x() < x_end.x(); _p.x()++) {
+				if(err + _m >= 0.5f) {
+					const float t = (0.5f - err) / _m;
+					sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] ) * t;
+					_p.y() += sgn;
+					err -= 1.f;
+					sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] ) * (1.f - t);
+				} else {
+					sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] );
+				}
+				err += _m;
+			}
+
+			_p.x() = x_end.x();
+			sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] ) * 0.5;
+
+		} else {
+
+			_m = 1.f / _m;
+
+			const Eigen::Vector2<IntT>
+				&y_start = _a.y() < _b.y() ? _a : _b,
+				&y_end = _a.y() > _b.y() ? _a : _b;
+			Eigen::Vector2<IntT> _p = y_start;
+
+			sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] ) * 0.5;
+
+			float err = _m / 2.0;
+			for(_p.y() += 1; _p.y() < y_end.y(); _p.y()++) {
+				if(err + _m >= 0.5f) {
+					const float t = (0.5f - err) / _m;
+					sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] ) * t;
+					_p.x() += sgn;
+					err -= 1.f;
+					sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] ) * (1.f - t);
+				} else {
+					sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] );
+				}
+				err += _m;
+			}
+
+			_p.y() = y_end.y();
+			sum += static_cast<fweight_t>( weights[GridUtils::gridIdx<X_Major, IntT>(_p, wsize)] ) * 0.5;
+
 		}
 
-	}
-
-	template<typename IntT = int, bool X_Major = false>
-	std::vector<mapsize_t> navigate(
-		This_T& graph,
-		const uint8_t* weights,
-		const Eigen::Vector2<IntT>& wsize,
-
-	) {
+		return sum * std::sqrt(1 + _m * _m);
 
 	}
 
-};
+protected:
+	std::vector<Node> map;
 
 
 };
-
-
-
-// template<bool X_Major = false>
-// class NavMap {
-// public:
-// 	using mapsize_t = uint16_t;
-// 	using fast_mapsize_t = uint_fast16_t;
-// 	using weight_t = uint8_t;
-// 	using fweight_t = float;
-
-// 	using int_t = int;
-// 	using float_t = float;
-
-// 	using MapSize = Eigen::Vector2<mapsize_t>;
-// 	using Vec2i = Eigen::Vector2<int_t>;
-// 	using Vec2f = Eigen::Vector2<float_t>;
-
-// 	struct Node {
-// 		mapsize_t
-// 			self_x,
-// 			self_y,
-// 			parent_x,
-// 			parent_y;
-// 		fweight_t
-// 			g, h;
-// 	};
-	
-// 	struct NodeCmp{
-// 		bool operator()(const Node& a, const Node& b) {}	// TODO
-// 		bool operator()(const Node* a, const Node* b) {}
-// 	};
-
-// 	struct NeighborsMove {
-// 		int8_t dx, dy;
-// 		fweight_t weight_scale;
-// 	};
-
-// 	using point_t = MapSize;
-// 	using path_t = std::vector<point_t>;
-// 	using queue_t = std::priority_queue<Node*, std::vector<Node*>, NodeCmp>;
-
-// 	static constexpr weight_t
-// 		DEFAULT_MAX_WEIGHT = 255,
-// 		DEFAULT_MIN_WEIGHT = 1;
-// 	static constexpr fweight_t
-// 		SQRT_2 = 1.41421356;
-// 	static constexpr NeighborsMove MOVES[] = {
-// 		{0 , 1 , 1.f},
-// 		{-1, 0 , 1.f},
-// 		{0 , -1, 1.f},
-// 		{1 , 0 , 1.f},
-// 		{1 , 1 , SQRT_2},
-// 		{-1, 1 , SQRT_2},
-// 		{-1, -1, SQRT_2},
-// 		{1 , -1, SQRT_2}
-// 	};
-// 	static constexpr size_t
-// 		NUM_MOVES = sizeof(MOVES) / sizeof(MOVES[0]);
-
-// public:
-// 	NavMap() = default;
-
-
-// 	void updateAndSpread(
-// 		const uint8_t* data,
-// 		mapsize_t x_dim,
-// 		mapsize_t y_dim,
-// 		float_t origin_x,
-// 		float_t origin_y,
-// 		float_t cell_res,
-// 		mapsize_t spread_radius);
-
-// 	path_t makePath(
-// 		mapsize_t src_x,
-// 		mapsize_t src_y,
-// 		mapsize_t dest_x,
-// 		mapsize_t dest_y);
-
-
-// protected:
-// 	Vec2f map_origin{};
-// 	MapSize map_size{};
-// 	float_t
-// 		cell_res{ 1. },
-// 		turn_cost{ 1. };
-
-// 	Node* nodes{ nullptr };
-
-
-// };
