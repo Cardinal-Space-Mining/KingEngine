@@ -80,8 +80,8 @@ WeightMap::WeightMap(mapsize_t width, mapsize_t height) : width(width), height(h
     }
 }
 
-weight_t *WeightMap::getWeights() const {
-    weight_t *const buff = new weight_t[this->width * this->height];
+std::vector<weight_t> WeightMap::getWeights() const {
+    std::vector<weight_t> buff(this->width * this->height);
 
     for (size_t y = 0; y < this->height; y++) {
         for (size_t x = 0; x < this->width; x++) {
@@ -108,8 +108,7 @@ bool WeightMap::operator==(const WeightMap &other) const {
 
 // Based off an implementation of Arrays.deepHashCode(e) from Java
 size_t WeightMap::hash() const {
-    constexpr
-    const size_t P = 97;
+    constexpr const size_t P = 97;
 
     const std::hash <mapsize_t> map_hashf;
     const std::hash <weight_t> weight_hashf;

@@ -8,9 +8,9 @@
 
 using namespace ros_bridge;
 
-const double ROBOT_WIDTH = 0.5; // in meters
-const std::pair<float, float> ARENA_SIZE(6.88f, 5.0f); // in meters
-const float CELL_RESOLUTION = 0.01f; // 0.01 = 1 sq cm for each cell
+static constexpr double ROBOT_WIDTH = 0.5; // in meters
+static constexpr std::pair<float, float> ARENA_SIZE(6.88f, 5.0f); // in meters
+static constexpr float CELL_RESOLUTION = 0.01f; // 0.01 = 1 sq cm for each cell
 
 
 WeightMap current_map(ARENA_SIZE.first / CELL_RESOLUTION, ARENA_SIZE.second / CELL_RESOLUTION);
@@ -18,7 +18,7 @@ WeightMap current_map(ARENA_SIZE.first / CELL_RESOLUTION, ARENA_SIZE.second / CE
 optional_point current_location = std::nullopt;
 optional_point destination = std::nullopt;
 
-const int turn_cost = 10;
+static constexpr weight_t turn_cost = 10;
 
 void ros_bridge::map_init() {
     const mapsize_t spread_radius = ROBOT_WIDTH / CELL_RESOLUTION;
@@ -85,7 +85,7 @@ nav_msgs::msg::OccupancyGrid ros_bridge::get_grid_values() {
     msg.data.resize(w*h, 0);
 
     auto weights = current_map.getWeights();
-    for (int i = 0; i < w*h; i++)
+    for (size_t i = 0; i < w*h; i++)
         msg.data[i] = weights[i] * (100.0f / current_map.getMaxWeight());
 
     return msg;

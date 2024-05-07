@@ -168,7 +168,7 @@ public:
 		return weight <= WeightMap::getMaxWeight() && weight >= WeightMap::getMinWeight();
 	}
 
-	weight_t* getWeights() const;
+	std::vector<weight_t> getWeights() const;
 
 	static std::string path_to_str(path_t &path);
 
