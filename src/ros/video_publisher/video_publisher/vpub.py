@@ -54,6 +54,12 @@ CAMERA_CENTER = "/dev/video0"
 
 class VideoPublisher(Node):
 
+    __RIGHT_CAM_PARAM_NAME__ = "right_cam_path"
+    __LEFT_CAM_PARAM_NAME__ = "left_cam_path"
+    __CENTER_CAM_PARAM_NAME__ = "center_cam_path"
+
+
+
     __slots__ = ("RightCamPub", "LeftCamPub", "CtrCamPub", "right_capture","left_capture","center_capture", "bridge", "cam_setting", "right_cam_timer", "left_cam_timer", "center_cam_timer")
 
 
@@ -91,16 +97,20 @@ class VideoPublisher(Node):
 
     def __init__(self):
         super().__init__('video_publisher')
+
+        self.declare_parameter(VideoPublisher.__RIGHT_CAM_PARAM_NAME__, rclpy.Parameter.Type.STRING)
+        self.declare_parameter(VideoPublisher.__LEFT_CAM_PARAM_NAME__, rclpy.Parameter.Type.STRING)
+        self.declare_parameter(VideoPublisher.__CENTER_CAM_PARAM_NAME__, rclpy.Parameter.Type.STRING)
         
         self.bridge = CvBridge()
-        
+
         self.RightCamPub = self.create_publisher(Image, 'ImageRight', VideoPublisher.get_cam_qos())
         self.LeftCamPub = self.create_publisher(Image, 'ImageLeft', VideoPublisher.get_cam_qos())
         self.CtrCamPub = self.create_publisher(Image, 'ImageCenter', VideoPublisher.get_cam_qos())
 
-        self.right_capture = self.load_camera(CAMERA_RIGHT)
-        self.left_capture = self.load_camera(CAMERA_LEFT)
-        self.center_capture = self.load_camera(CAMERA_CENTER)
+        self.right_capture = self.load_camera(self.get_parameter(VideoPublisher.__RIGHT_CAM_PARAM_NAME__).get_parameter_value().string_value)
+        self.left_capture = self.load_camera(self.get_parameter(VideoPublisher.__LEFT_CAM_PARAM_NAME__).get_parameter_value().string_value)
+        self.center_capture = self.load_camera(self.get_parameter(VideoPublisher.__CENTER_CAM_PARAM_NAME__).get_parameter_value().string_value)
 
         self.cam_setting = IMX179_MJPG_settings[-5] #640x480 30fps
 
