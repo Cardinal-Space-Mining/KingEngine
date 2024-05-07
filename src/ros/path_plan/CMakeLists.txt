@@ -23,7 +23,7 @@ else()
   MESSAGE(STATUS "OpenCV installation not found")
 endif()
 
-add_executable(main src/main.cpp src/path_plan.cpp src/WeightMap.cpp)
+add_executable(main src/PathPlanNode.cpp src/WeightMap.cpp)
 ament_target_dependencies(main rclcpp custom_types nav_msgs)
 
 if(OpenCV_FOUND)

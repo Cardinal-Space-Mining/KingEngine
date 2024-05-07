@@ -13,10 +13,11 @@
 
 // Weight Distribution
 
-enum BorderPlace: int{
+enum BorderPlace : int
+{
 	TOP = 1 << 0,
 	BOTTOM = 1 << 1,
-	RIGHT = 1 <<2,
+	RIGHT = 1 << 2,
 	LEFT = 1 << 3,
 	UNKNOWN = 1 << 4
 };
@@ -27,9 +28,8 @@ const char *to_string(const BorderPlace &self);
 
 inline BorderPlace operator|(BorderPlace a, BorderPlace b)
 {
-    return static_cast<BorderPlace>(static_cast<std::underlying_type_t<BorderPlace>>(a) | static_cast<std::underlying_type_t<BorderPlace>>(b));
+	return static_cast<BorderPlace>(static_cast<std::underlying_type_t<BorderPlace>>(a) | static_cast<std::underlying_type_t<BorderPlace>>(b));
 }
-
 
 using mapsize_t = uint16_t;
 
@@ -39,7 +39,6 @@ using weight_t = uint16_t;
 
 using fweight_t = float;
 
-
 /// <summary>
 /// A dense weighted map for navigation purposes.
 /// Memory is runtime allocated
@@ -47,7 +46,6 @@ using fweight_t = float;
 class WeightMap
 {
 private:
-
 	typedef struct Node
 	{
 		const mapsize_t x;
@@ -55,16 +53,16 @@ private:
 		mapsize_t parent_x;
 		mapsize_t parent_y;
 		weight_t weight;
-        fweight_t g;
-        fweight_t h;
+		fweight_t g;
+		fweight_t h;
 
 		Node(const mapsize_t x,
-			const mapsize_t y,
-			const mapsize_t parent_x,
-			const mapsize_t parent_y,
-			const weight_t weight,
-			const fweight_t g,
-            const fweight_t h);
+			 const mapsize_t y,
+			 const mapsize_t parent_x,
+			 const mapsize_t parent_y,
+			 const weight_t weight,
+			 const fweight_t g,
+			 const fweight_t h);
 		Node();
 
 		bool operator==(const Node &other);
@@ -79,7 +77,6 @@ private:
 		bool operator()(const Node *a, const Node *b);
 	};
 
-
 	struct NeighborsMove
 	{
 		int8_t dx;
@@ -89,16 +86,15 @@ private:
 
 	static constexpr fweight_t SQRT_2 = 1.42f; // Slightly more than actual sqrt2
 	static constexpr WeightMap::NeighborsMove moves[] = {
-		{0 , 1 , 1},
-		{-1, 0 , 1},
-		{0 , -1, 1},
-		{1 , 0 , 1},
-		{1 , 1 , SQRT_2},
-		{-1, 1 , SQRT_2},
+		{0, 1, 1},
+		{-1, 0, 1},
+		{0, -1, 1},
+		{1, 0, 1},
+		{1, 1, SQRT_2},
+		{-1, 1, SQRT_2},
 		{-1, -1, SQRT_2},
-		{1 , -1, SQRT_2}};
+		{1, -1, SQRT_2}};
 	static constexpr size_t numMoves = sizeof(moves) / sizeof(moves[0]);
-
 
 public:
 	using point_t = std::pair<mapsize_t, mapsize_t>;
@@ -145,15 +141,15 @@ public:
 
 	path_t getPath(mapsize_t srcX, mapsize_t srcY, mapsize_t dstX, mapsize_t dstY, weight_t turn_cost);
 
-    void spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, mapsize_t radius);
+	void spreadDataArray(const signed char *data, mapsize_t origin_x, mapsize_t origin_y, mapsize_t data_w, mapsize_t data_h, mapsize_t radius);
 
-    void addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite);
+	void addBorder(mapsize_t border_width, weight_t border_weight, BorderPlace place, bool gradient, bool overwrite);
 
 	void addCircle(mapsize_t x_in, mapsize_t y_in, mapsize_t radius, weight_t weight, bool gradient, bool overwrite);
 
-    void addRectangle(mapsize_t x_in, mapsize_t y_in, mapsize_t w_in, mapsize_t h_in, weight_t weight, mapsize_t radius, bool overwrite);
+	void addRectangle(mapsize_t x_in, mapsize_t y_in, mapsize_t w_in, mapsize_t h_in, weight_t weight, mapsize_t radius, bool overwrite);
 
-    WeightMap(WeightMap &) = default;
+	WeightMap(WeightMap &) = default;
 
 	WeightMap() = delete;
 
@@ -174,11 +170,11 @@ public:
 
 	static std::string point_to_string(const point_t &pt);
 
-	std::pair<const char*, const size_t> serialize() const;
+	std::pair<const char *, const size_t> serialize() const;
 
-	static WeightMap deserialize(std::pair<const char*, const size_t> bytes);
+	static WeightMap deserialize(std::pair<const char *, const size_t> bytes);
 
-	bool operator==(const WeightMap& other) const;
+	bool operator==(const WeightMap &other) const;
 
 	size_t hash() const;
 
@@ -194,22 +190,22 @@ private:
 
 	path_t backtracePath(const Node &src, const Node &dst) const;
 
-	fweight_t get_linear_cost(Node& a, Node& b);
+	fweight_t get_linear_cost(Node &a, Node &b);
 
 private:
 	// Class Fields
 	const mapsize_t width;
 	const mapsize_t height;
 
-	//Indexed in x-y form
+	// Indexed in x-y form
 	BlockArray2DRT<Node> arr;
 };
 
 template <>
 struct std::hash<WeightMap>
 {
-  std::size_t inline operator()(const WeightMap& k) const
-  {
-    return k.hash();
-  }
+	std::size_t inline operator()(const WeightMap &k) const
+	{
+		return k.hash();
+	}
 };
