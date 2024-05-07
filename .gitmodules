@@ -10,3 +10,6 @@
 [submodule "src/ros/sick_scan_xd"]
 	path = src/ros/sick_scan_xd
 	url = https://github.com/sickag/sick_scan_xd
+[submodule "src/ros/rio_interface/rio_interface/PiSerialControl"]
+	path = src/ros/rio_interface/rio_interface/PiSerialControl
+	url = https://github.com/Cardinal-Space-Mining/PiSerialControl.git

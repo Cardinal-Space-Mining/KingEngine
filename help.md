@@ -7,7 +7,7 @@
  * Nodes can be prepopulated via  `ros2 pkg create --build-type ament_cmake --license MIT --node-name NODE_NAME <pkg name>`
  # Building
  * Update dependencies: `rosdep install -i --from-path src --rosdistro humble -y`
- * Build: `colcon build`
+ * Build: `colcon build --cmake-args=-DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=ON --executor parallel`
  * Source new nodes: `source ./install/setup.bash`
  # Running
  * Build if you like
