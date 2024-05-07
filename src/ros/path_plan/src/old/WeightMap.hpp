@@ -16,7 +16,7 @@
 enum BorderPlace: int {
 	TOP = 1 << 0,
 	BOTTOM = 1 << 1,
-	RIGHT = 1 <<2,
+	RIGHT = 1 << 2,
 	LEFT = 1 << 3,
 	UNKNOWN = 1 << 4
 };
@@ -29,7 +29,6 @@ inline BorderPlace operator|(BorderPlace a, BorderPlace b)
 {
 	return static_cast<BorderPlace>(static_cast<std::underlying_type_t<BorderPlace>>(a) | static_cast<std::underlying_type_t<BorderPlace>>(b));
 }
-
 
 
 /// <summary>
@@ -87,7 +86,6 @@ private:
 		bool operator()(const Node *a, const Node *b);
 	};
 
-
 	struct NeighborsMove
 	{
 		int8_t dx;
@@ -108,7 +106,6 @@ private:
 		{1 , -1, SQRT_2}
 	};
 	static constexpr size_t numMoves = sizeof(moves) / sizeof(moves[0]);
-
 
 public:
 
@@ -164,15 +161,15 @@ public:
 	static inline bool isValidWeight(weight_t weight)
 		{ return weight <= WeightMap::getMaxWeight() && weight >= WeightMap::getMinWeight(); }
 
-	weight_t* getWeights() const;
+	std::vector<weight_t> getWeights() const;
 
 	static std::string path_to_str(path_t &path);
 
 	static std::string point_to_string(const point_t &pt);
 
-	std::pair<const char*, const size_t> serialize() const;
+	std::pair<const char *, const size_t> serialize() const;
 
-	static WeightMap deserialize(std::pair<const char*, const size_t> bytes);
+	static WeightMap deserialize(std::pair<const char *, const size_t> bytes);
 
 	size_t hash() const;
 
@@ -187,7 +184,7 @@ private:
 
 	path_t backtracePath(const Node &src, const Node &dst) const;
 
-	fweight_t get_linear_cost(Node& a, Node& b);
+	fweight_t get_linear_cost(Node &a, Node &b);
 
 
 private:
@@ -195,7 +192,7 @@ private:
 	const mapsize_t width;
 	const mapsize_t height;
 
-	//Indexed in x-y form
+	// Indexed in x-y form
 	BlockArray2DRT<Node> arr;
 
 };	// WeightMap

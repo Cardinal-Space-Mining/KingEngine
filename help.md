@@ -9,7 +9,7 @@
  # Building
  * Update dependencies: `rosdep install -i --from-path src --rosdistro <distro name> -y`
  	- ex. for humble: `rosdep install -i --from-path src --rosdistro humble -y`
- * Build: `colcon build` (add `--executor parallel` for multiple cores, `--event-handlers console_direct+` to view live cmake output, `--packages-select`/`--packages-skip` to build specific packages only, or skip specific packages only)
+ * Build: `colcon build` (add `--executor parallel` for multiple cores, `--event-handlers console_direct+` to view live cmake output, `--packages-select`/`--packages-skip` to build specific packages only, or skip specific packages only, `--cmake-args=-DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=ON` to make a compilation database)
 	- ex. `colcon build --executor parallel --event-handlers console_direct+`
 	- ex. `colcon build --executor parallel --event-handlers console_direct+ --packages-skip sick_scan_xd` because sick_scan_xd takes forever :/
  * Source new nodes: `source ./install/setup.bash`

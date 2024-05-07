@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.9.4)
 project(path_plan)
+
+set (CMAKE_CXX_STANDARD 17)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -22,8 +24,8 @@ else()
   MESSAGE(STATUS "OpenCV installation not found")
 endif()
 
-add_executable(main src/main.cpp src/path_plan/pathplan.cpp)
-ament_target_dependencies(main rclcpp nav_msgs geometry_msgs)
+add_executable(main src/PathPlanNode.cpp src/WeightMap.cpp)
+ament_target_dependencies(main rclcpp custom_types nav_msgs)
 
 if(OpenCV_FOUND)
   target_link_libraries(main ${OpenCV_LIBS})
