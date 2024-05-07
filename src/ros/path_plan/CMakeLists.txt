@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.9.4)
 project(path_plan)
+
+set (CMAKE_CXX_STANDARD 17)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -27,6 +29,16 @@ ament_target_dependencies(main rclcpp nav_msgs geometry_msgs)
 
 if(OpenCV_FOUND)
   target_link_libraries(main ${OpenCV_LIBS})
+endif()
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT supported OUTPUT error)
+
+if( supported )
+    message(STATUS "IPO / LTO enabled")
+    set_property(TARGET main PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    message(STATUS "IPO / LTO not supported: <${error}>")
 endif()
 
 target_include_directories(main

@@ -1,3 +1,6 @@
+uint32 TRACK_RIGHT = 0
+uint32 TRACK_LEFT = 1
+
 uint32 motor_number
 float64 velocity_turns_per_second
 ---
