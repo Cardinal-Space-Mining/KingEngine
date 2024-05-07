@@ -108,9 +108,13 @@ class VideoPublisher(Node):
         self.LeftCamPub = self.create_publisher(Image, 'ImageLeft', VideoPublisher.get_cam_qos())
         self.CtrCamPub = self.create_publisher(Image, 'ImageCenter', VideoPublisher.get_cam_qos())
 
-        self.right_capture = self.load_camera(self.get_parameter(VideoPublisher.__RIGHT_CAM_PARAM_NAME__).get_parameter_value().string_value)
-        self.left_capture = self.load_camera(self.get_parameter(VideoPublisher.__LEFT_CAM_PARAM_NAME__).get_parameter_value().string_value)
-        self.center_capture = self.load_camera(self.get_parameter(VideoPublisher.__CENTER_CAM_PARAM_NAME__).get_parameter_value().string_value)
+        right_cam_fd = self.get_parameter(VideoPublisher.__RIGHT_CAM_PARAM_NAME__).get_parameter_value().string_value
+        left_cam_fd = self.get_parameter(VideoPublisher.__LEFT_CAM_PARAM_NAME__).get_parameter_value().string_value
+        center_cam_fd = self.get_parameter(VideoPublisher.__CENTER_CAM_PARAM_NAME__).get_parameter_value().string_value
+
+        self.right_capture = self.load_camera(right_cam_fd)
+        self.left_capture = self.load_camera(left_cam_fd)
+        self.center_capture = self.load_camera(center_cam_fd)
 
         self.cam_setting = IMX179_MJPG_settings[-5] #640x480 30fps
 
@@ -122,6 +126,7 @@ class VideoPublisher(Node):
         self.left_cam_timer = self.create_timer(1.0 / self.cam_setting["fps"], lambda: VideoPublisher.publish_frame(self, self.left_capture, self.bridge, self.LeftCamPub))
         self.center_cam_timer = self.create_timer(1.0 / self.cam_setting["fps"], lambda: VideoPublisher.publish_frame(self, self.center_capture, self.bridge, self.CtrCamPub))
 
+        self._logger.info(f"Launced video_publisher and bound cameras. Right: {right_cam_fd}. Left: {left_cam_fd}, Center: {center_cam_fd}")
 
 
     def destroy_node(self):
