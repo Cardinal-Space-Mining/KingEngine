@@ -20,16 +20,29 @@ using std::placeholders::_1;
 using point = std::pair<uint16_t, uint16_t>;
 using path = std::vector<point>;
 
+const std::string PathPlanNode::BOT_WIDTH_PARAM_NAME = "robot_width";
+const std::string PathPlanNode::ARENA_WIDTH_PARAM_NAME = "arena_width";
+const std::string PathPlanNode::ARENA_HEIGHT_PARAM_NAME = "arena_height";
+const std::string PathPlanNode::CELL_RES_PARAM_NAM = "cell_resolution";
+const std::string PathPlanNode::TURN_COST_PARAM_NAME = "turn_cost";
+
 PathPlanNode::PathPlanNode()
     : Node("path_plan"),
       lidar_data_sub(this->create_subscription<nav_msgs::msg::OccupancyGrid>("lidar_map", 10, std::bind(&PathPlanNode::lidar_change_cb, this, _1))),
       dest_sub(this->create_subscription<custom_types::msg::Location>("destination", 10, std::bind(&PathPlanNode::destination_change_cb, this, _1))),
       location_sub(this->create_subscription<custom_types::msg::Location>("location", 10, std::bind(&PathPlanNode::location_change_cb, this, _1))),
       path_pub(this->create_publisher<custom_types::msg::Path>("path", 10)),
-      weight_map_pub(this->create_publisher<nav_msgs::msg::OccupancyGrid>("weight_map", 10))
+      weight_map_pub(this->create_publisher<nav_msgs::msg::OccupancyGrid>("weight_map", 10)),
+      PARAMETERS_SET(this->set_parameters()),
+      ROBOT_WIDTH(this->get_parameter(BOT_WIDTH_PARAM_NAME).as_double()),
+      ARENA_SIZE(std::make_pair<float, float>(this->get_parameter(ARENA_WIDTH_PARAM_NAME).as_double(), this->get_parameter(ARENA_HEIGHT_PARAM_NAME).as_double())),
+      CELL_RESOLUTION(this->get_parameter(CELL_RES_PARAM_NAM).as_double()),
+      TURN_COST(this->get_parameter(TURN_COST_PARAM_NAME).as_int()),
+      current_map{static_cast<mapsize_t>(ARENA_SIZE.first / CELL_RESOLUTION), static_cast<mapsize_t>(ARENA_SIZE.second / CELL_RESOLUTION)}
 {
   init_map();
   publish_map();
+  RCLCPP_INFO(this->get_logger(), "Started path_plan node with params {ROBOT_WIDTH: %lf, ARENA_SIZE: (%lf, %lf), CELL_RESOLUTION: %lf, TURN_COST: %d}", ROBOT_WIDTH, ARENA_SIZE.first, ARENA_SIZE.second, CELL_RESOLUTION, TURN_COST);
 }
 
 void PathPlanNode::init_map()
@@ -88,7 +101,7 @@ void PathPlanNode::publish_map()
 void PathPlanNode::lidar_change_cb(const nav_msgs::msg::OccupancyGrid &map)
 {
   RCLCPP_INFO(this->get_logger(), "%s", "Recieved lidar data");
-  static constexpr mapsize_t spread_radius = ROBOT_WIDTH / CELL_RESOLUTION;
+  const mapsize_t spread_radius = ROBOT_WIDTH / CELL_RESOLUTION;
   current_map.spreadDataArray(map.data.data(), map.info.origin.position.x, map.info.origin.position.y, map.info.width, map.info.height, spread_radius);
 
   this->publish_path();
@@ -164,6 +177,16 @@ nav_msgs::msg::OccupancyGrid PathPlanNode::get_occupancy_grid()
   msg.info.map_load_time = this->get_clock()->now();
 
   return msg;
+}
+
+bool PathPlanNode::set_parameters()
+{
+  this->declare_parameter<decltype(PathPlanNode::ROBOT_WIDTH)>(BOT_WIDTH_PARAM_NAME, DEFAULT_ROBOT_WIDTH);
+  this->declare_parameter<decltype(PathPlanNode::ARENA_SIZE.first)>(ARENA_WIDTH_PARAM_NAME, DEFAULT_ARENA_SIZE.first);
+  this->declare_parameter<decltype(PathPlanNode::ARENA_SIZE.second)>(ARENA_HEIGHT_PARAM_NAME, DEFAULT_ARENA_SIZE.second);
+  this->declare_parameter<decltype(PathPlanNode::CELL_RESOLUTION)>(CELL_RES_PARAM_NAM, DEFAULT_CELL_RESOLUTION);
+  this->declare_parameter<decltype(PathPlanNode::TURN_COST)>(TURN_COST_PARAM_NAME, DEFAULT_TURN_COST);
+  return true;
 }
 
 int main(int argc, char *argv[])
