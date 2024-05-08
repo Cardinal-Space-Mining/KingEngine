@@ -14,6 +14,8 @@
   <depend>rio_interface</depend>
   <depend>sick_scan_xd</depend>
   <depend>traversal</depend>
+  <depend>sick_perception</depend>
+  <depend>video_publisher</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

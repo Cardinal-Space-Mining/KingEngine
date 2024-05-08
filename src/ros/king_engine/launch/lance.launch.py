@@ -9,7 +9,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
     current_pkg = FindPackageShare('direct_lidar_odometry')
-    dlio_launch = IncludeLaunchDescription(
+    dlo_launch = IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 PathJoinSubstitution([
                     FindPackageShare('direct_lidar_odometry'),
@@ -44,7 +44,7 @@ def generate_launch_description():
         output = 'screen',
         remappings=[
             ('lidar_map', 'perception/obstacle_grid'),
-            ('location', 'dlio/odom_node/pose'),
+            ('location', 'dlo/odom_node/pose'),
             ('destination', 'king_engine/destination'),
             ('path', 'path_plan/path'),
             ('weight_map', 'path_plan/weight_map')
@@ -57,7 +57,7 @@ def generate_launch_description():
         output = 'screen',
         remappings=[
             ('/uesim/scan', '/cloud_all_fields_fullframe'),
-            ('/uesim/pose', 'dlio/odom_node/pose'),
+            ('/uesim/pose', 'dlo/odom_node/pose'),
             ('/ldrp/obstacle_grid', 'perception/obstacle_grid')
         ]
     )
@@ -67,7 +67,7 @@ def generate_launch_description():
         executable = 'main',
         output = 'screen',
         remappings=[
-            ('location', 'dlio/odom_node/pose'),
+            ('location', 'dlo/odom_node/pose'),
             ('destination', 'king_engine/destination')
         ]
     )
@@ -77,18 +77,38 @@ def generate_launch_description():
         executable = 'main',
         output = 'screen',
         remappings=[
-            ('location', 'dlio/odom_node/pose')
+            ('location', 'dlo/odom_node/pose'),
             ('path', 'path_planning/path')
         ]
     )
 
+    rio_interface_node = Node(
+        package = 'rio_interface',
+        executable = 'rio_interface.py',
+        output = 'screen',
+        # remapping=[
+        #     ('set_track_velocity', 'rio_interface/set_track_velocity'),
+        #     ('start_mining', 'rio_interface/start_mining'),
+        #     ('stop_mining', 'rio_interface/stop_mining'),
+        #     ('start_offload', 'rio_interface/start_offload')
+        # ]
+    )
+
+    video_publisher_node = Node(
+        package = 'video_published',
+        executable = 'video_publisher.py',
+        output = 'screen'
+    )
+
     return LaunchDescription([
-        dlio_launch,
+        dlo_launch,
         sick_launch,
         path_plan_node,
         perception_node,
         king_engine_node,
-        traversal_node
+        traversal_node,
+        rio_interface_node,
+        video_publisher_node
     ])
 
 
