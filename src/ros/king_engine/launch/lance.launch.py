@@ -8,13 +8,13 @@ from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
-    current_pkg = FindPackageShare('direct_lidar_inertial_odometry')
+    current_pkg = FindPackageShare('direct_lidar_odometry')
     dlio_launch = IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 PathJoinSubstitution([
-                    FindPackageShare('direct_lidar_inertial_odometry'),
+                    FindPackageShare('direct_lidar_odometry'),
                     'launch',
-                    'dlio.launch.py'
+                    'dlo.launch.py'
                 ])
             ]),
             launch_arguments={
