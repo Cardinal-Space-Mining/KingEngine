@@ -21,7 +21,7 @@ if(OpenCV_FOUND)  # keeping this even though its now required
   add_compile_definitions(HAVE_OPENCV)
   include_directories(${OpenCV_INCLUDE_DIRS})
 else()
-  MESSAGE(STATUS "OpenCV installation not found")
+  MESSAGE(FATAL_ERROR "OpenCV installation not found")
 endif()
 
 add_executable(main src/main.cpp src/path_plan/pathplan.cpp)
