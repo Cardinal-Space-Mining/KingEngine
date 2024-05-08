@@ -20,20 +20,13 @@ using namespace ros_bridge;
 
 Location cached_location;
 
-
-class KingEngineNode : public rclcpp::Node
-{
+class KingEngineNode : public rclcpp::Node {
   public:
-    KingEngineNode()
-    : Node("king_engine")
-    {
+    KingEngineNode() : Node("king_engine") {
       location_sub = this->create_subscription<custom_types::msg::Location>("location", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
       destination_pub = this->create_publisher<custom_types::msg::Location>("destination", 10);
     }
-
-    void location_change_cb(const custom_types::msg::Location& msg)
-    {
-
+    void location_change_cb(const custom_types::msg::Location& msg) {
       RCLCPP_INFO(this->get_logger(), "Recieved location: (%F, %F)", msg.x, msg.y);
       Location l = {msg.x, msg.y};
       cached_location = l;
@@ -42,13 +35,23 @@ class KingEngineNode : public rclcpp::Node
     rclcpp::Publisher<custom_types::msg::Location>::SharedPtr destination_pub;
 };
 
+
 std::mutex node_mutex;
 std::shared_ptr<KingEngineNode> node{nullptr};
 
-void ros_bridge::set_destination(Location l){
+
+void choose_destinations() {
+  // excavation zone
+  // berm zone
+}
+
+
+
+
+
+void ros_bridge::set_destination(Location l) {
   //Check if node has been created
-  if (!node)
-  {
+  if (!node) {
     std::fprintf(stderr, "%s", "update_destination called before initialization");
     return;
   }
@@ -62,16 +65,15 @@ void ros_bridge::set_destination(Location l){
   std::shared_ptr<KingEngineNode> node_inc_ref = node;
   std::lock_guard<std::mutex> node_lock(node_mutex);
   node_inc_ref->destination_pub->publish(loc);
-  
 }
 
-Location ros_bridge::get_location(){
+
+Location ros_bridge::get_location() {
   return cached_location;
 }
 
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char * argv[]) {
   rclcpp::init(argc, argv);
   node = std::make_shared<KingEngineNode>();
   rclcpp::spin(node);
