@@ -21,14 +21,24 @@ if(OpenCV_FOUND)  # keeping this even though its now required
   add_compile_definitions(HAVE_OPENCV)
   include_directories(${OpenCV_INCLUDE_DIRS})
 else()
-  MESSAGE(STATUS "OpenCV installation not found")
+  MESSAGE(FATAL_ERROR "OpenCV installation not found")
 endif()
 
-add_executable(main src/PathPlanNode.cpp src/WeightMap.cpp)
-ament_target_dependencies(main rclcpp custom_types nav_msgs)
+add_executable(main src/main.cpp src/path_plan/pathplan.cpp)
+ament_target_dependencies(main rclcpp nav_msgs geometry_msgs)
 
 if(OpenCV_FOUND)
   target_link_libraries(main ${OpenCV_LIBS})
+endif()
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT supported OUTPUT error)
+
+if( supported )
+    message(STATUS "IPO / LTO enabled")
+    set_property(TARGET main PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    message(STATUS "IPO / LTO not supported: <${error}>")
 endif()
 
 target_include_directories(main

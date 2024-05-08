@@ -7,8 +7,13 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
 find_package(custom_types REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(direct_lidar_inertial_odometry REQUIRED)
+find_package(path_plan REQUIRED)
+find_package(rio_interface REQUIRED)
+find_package(sick_scan_xd REQUIRED)
+find_package(traversal REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
