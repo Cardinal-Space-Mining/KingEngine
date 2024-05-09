@@ -129,6 +129,8 @@ void profile::compile_path_linear(std::vector<point> path)
 
     m_path.clear();
 
+    at_destination = false;
+
     for (size_t i = 0; i < path.size() - 1; ++i)
     {
         m_path.push_back(motion_node(path[i], path[i + 1]));
@@ -150,8 +152,6 @@ void profile::compile_path_linear(std::vector<point> path)
 void profile::follow_path()
 {
     // change to check if size is zero
-    if (path.size() == 0)
-        return;
     if (m_path.size() == 0)
         return;
 
@@ -173,9 +173,14 @@ void profile::follow_path()
         target = curnode.get_target_from_distance(current, distance);
     }
 
+    if(current == target) {
+        this->at_destination = true;
+        this->pointTurn();
+        return;
+    }
     // Assumes a normalized target angle
     // if the closest point is the target
-    setHeading(target);
+    setTargetHeading(target);
 
     double headings[2] = {(tar_angle - 360 - cur_angle), (tar_angle + 360 - cur_angle)};
 
@@ -198,8 +203,8 @@ void profile::follow_path()
     if (shortestDiff < 0)
         percentage = percentage * -1;
 
-    if (!at_destination)
-    {
+    // if (!at_destination)
+    // {
         if (shortestDiff > 30)
         {
             this->linear_velocity = 0.0;
@@ -210,18 +215,18 @@ void profile::follow_path()
             this->linear_velocity = (1 - percentage); // If we are at our current heading, go 100%
             this->angular_velocity = percentage;
         }
-    }
-    else
-    {
-        // If we are finished, then this method should not be setting the velocities to anything.
-        linear_velocity = 0.0;
-        angular_velocity = 0.0;
-    }
+    // }
+    // else
+    // {
+    //     // If we are finished, then this method should not be setting the velocities to anything.
+    //     linear_velocity = 0.0;
+    //     angular_velocity = 0.0;
+    // }
 
     return;
 }
 
-void profile::setHeading(point target)
+void profile::setTargetHeading(point target)
 {
     // Calculate the differences in x and y coordinates
     double dx = target.x - current.x;

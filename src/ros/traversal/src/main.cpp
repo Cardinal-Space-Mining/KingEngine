@@ -18,13 +18,7 @@
 #include "traversal/motion_profile.hpp"
 
 using namespace std::chrono_literals;
-using std::placeholders::_1;
-
-struct Point
-{
-  double x_meters;
-  double y_meters;
-};
+using std::placeholders::_1
 
 class TraversalNode : public rclcpp::Node
 {
@@ -59,11 +53,11 @@ public:
   void path_change_cb(const custom_types::msg::Path &path)
   {
     RCLCPP_INFO(this->get_logger(), "%s", "Recieved new path");
-    std::vector<Point> cpath(path.path.size());
+    std::vector<point> cpath(path.path.size());
     for (size_t i = 0; i < path.path.size(); i++)
     {
-      cpath[i].x_meters = path.path[i].x;
-      cpath[i].y_meters = path.path[i].y;
+      cpath[i].x = path.path[i].x;
+      cpath[i].y = path.path[i].y;
     }
     this->on_path_change(cpath);
   }
@@ -104,12 +98,53 @@ public:
     }
   }
 
-  void on_path_change(std::vector<Point> &points)
+  void on_path_change(std::vector<point> &points)
   {
+    //update everything?
+    motionProfile->compile_path_linear(points);
   }
 
   void on_location_change(double x_meters, double y_meters, double yaw_degrees)
   {
+    //On the change of the location, we should update the motion profile so its current point and heading matches what we get, then we follow the path
+    motionProfile->setCurrent(x_meters, y_meters);
+    motionProfile->setCurrentHeading(yaw_degrees);
+
+    motionProfile->follow_path();
+
+    double max_velocity = 750;
+    //set the velocities here
+
+    double linear = motionProfile.getLinearVelocity();
+    double anglular = motionProfile.getAngularVelocity();
+
+    double leftVelocity = 0.0;
+    double rightVelocity = 0.0;
+
+    double temp_velocity = max_velocity * linear;
+    if (linear == 0.0) { //If our linear velocity is 0, then do a pure point turn
+      if (angular < 0) { //counterclockwise 
+      //   leftVelocity = max_velocity * angular;
+      //   rightVelocity = max_velocity * angular * -1; //Angular is negative, so we want right to be positive
+      // } else { //clockwise
+        leftVelocity = max_velocity * angular;
+        rightVelocity = max_velocity * angular * -1; //Anguilar is positive, we want the right to be negative
+      }
+    } else { //Or else we are doing a 'regular' turn with some forward throttle. Angular velocity determines which side gets more push
+    if (angular < 0) {
+      leftVelocity = max_velocity * linear * abs(1 - angular);
+      rightVelocity = max_velocity * linear * abs(angular);
+    } else {
+      leftVelocity = max_velocity * linear * angular;
+      rightVelocity = max_velocity * linear * (1 - angular);
+    }
+     
+    }
+
+    set_right_track_velo(rightVelocity);
+
+    set_left_track_velo(leftVelocity);
+    
   }
 
 private:
