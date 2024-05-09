@@ -46,28 +46,33 @@
 #include <vector>
 #include <chrono>
 
-using namespace std::literals::chrono_literals;
-
 #include <Eigen/Core>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+
+using namespace std::literals::chrono_literals;
+
+const std::string PathPlanNode::DEFAULT_OUTPUT_FRAME_ID = "world";
+
 const std::string PathPlanNode::ROBOT_WIDTH_PARAM_NAME = "robot_width";
 const std::string PathPlanNode::TURN_COST_PARAM_NAME = "turn_cost";
 const std::string PathPlanNode::MIN_WEIGHT_PARAM_NAME = "min_weight";
 const std::string PathPlanNode::UPDATE_TIME_PARAM_NAME = "update_time_s";
+const std::string PathPlanNode::OUTPUT_FRAME_PARAM_NAME = "output_frame";
 
 PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   node_init(this->config_node()),
-							   lidar_data_sub(this->create_subscription<nav_msgs::msg::OccupancyGrid>("/ldrp/obstacle_grid", 1, std::bind(&PathPlanNode::lidar_change_cb, this, std::placeholders::_1))),
-							   dest_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/destination", 1, std::bind(&PathPlanNode::destination_change_cb, this, std::placeholders::_1))),
-							   location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/uesim/pose", 1, std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1))),
+							   lidar_data_sub(this->create_subscription<nav_msgs::msg::OccupancyGrid>("obstacle_grid", 1, std::bind(&PathPlanNode::lidar_change_cb, this, std::placeholders::_1))),
+							   dest_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("target_pose", 1, std::bind(&PathPlanNode::destination_change_cb, this, std::placeholders::_1))),
+							   location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("current_pose", 1, std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1))),
 							   path_pub(this->create_publisher<nav_msgs::msg::Path>("/pathplan/nav_path", 1)),
 							   weight_map_pub(this->create_publisher<nav_msgs::msg::OccupancyGrid>("/pathplan/nav_map", 1)),
 							   robot_width(this->get_parameter(ROBOT_WIDTH_PARAM_NAME).as_double()),
 							   turn_cost(this->get_parameter(TURN_COST_PARAM_NAME).as_int()),
 							   min_weight(this->get_parameter(MIN_WEIGHT_PARAM_NAME).as_int()),
+							   output_frame_id(this->get_parameter(OUTPUT_FRAME_PARAM_NAME).as_string()),
 							   periodic_publisher(this->create_wall_timer(this->get_parameter(UPDATE_TIME_PARAM_NAME).as_double() * 1000ms, std::bind(&PathPlanNode::export_data, this)))
 
 {
@@ -156,7 +161,7 @@ void PathPlanNode::export_data()
 
 		ros_path.poses.resize(path.size());
 		ros_path.header.stamp = this->get_clock()->now();
-		ros_path.header.frame_id = "world";
+		ros_path.header.frame_id = this->output_frame_id;
 
 		for (size_t i = 0; i < path.size(); i++)
 		{
@@ -168,7 +173,7 @@ void PathPlanNode::export_data()
 			ros_path.poses[i].pose.orientation.y = 0.0;
 			ros_path.poses[i].pose.orientation.z = 0.0;
 			ros_path.poses[i].header.stamp = ros_path.header.stamp;
-			ros_path.poses[i].header.frame_id = "world";
+			ros_path.poses[i].header.frame_id = this->output_frame_id;
 		}
 
 		if (path.size() > 0)
@@ -194,5 +199,6 @@ bool PathPlanNode::config_node()
 	this->declare_parameter(TURN_COST_PARAM_NAME, DEFAULT_TURN_COST);
 	this->declare_parameter(MIN_WEIGHT_PARAM_NAME, DEFAULT_MIN_WEIGHT);
 	this->declare_parameter(UPDATE_TIME_PARAM_NAME, DEFAULT_UPDATE_TIME_S);
+	this->declare_parameter(OUTPUT_FRAME_PARAM_NAME, DEFAULT_OUTPUT_FRAME_ID);
 	return true;
 }
