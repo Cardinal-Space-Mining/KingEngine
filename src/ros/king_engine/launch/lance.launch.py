@@ -3,12 +3,12 @@ from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition   
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
-from launch_ros.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription
 from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
-    current_pkg = FindPackageShare('direct_lidar_odometry')
+    current_pkg = FindPackageShare('king_engine')
     dlo_launch = IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 PathJoinSubstitution([
@@ -84,7 +84,7 @@ def generate_launch_description():
 
     rio_interface_node = Node(
         package = 'rio_interface',
-        executable = 'rio_interface.py',
+        executable = 'rio_interface',
         output = 'screen',
         # remapping=[
         #     ('set_track_velocity', 'rio_interface/set_track_velocity'),
@@ -95,8 +95,8 @@ def generate_launch_description():
     )
 
     video_publisher_node = Node(
-        package = 'video_published',
-        executable = 'video_publisher.py',
+        package = 'video_publisher',
+        executable = 'vpub',
         output = 'screen'
     )
 
