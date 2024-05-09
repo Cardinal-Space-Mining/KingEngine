@@ -11,19 +11,22 @@
 // Forward declaration
 class motion_node;
 
-struct point {
+struct point
+{
 	double x, y;
 
-	bool operator==(const point& b) const {
+	bool operator==(const point &b) const
+	{
 		return ((x > b.x - 0.01 && x < b.x + 0.01) && (y > b.y - 0.01 && y < b.y + 0.01));
 	}
 
-	point(double x, double y) : x(x), y(y) {};
+	point(double x, double y) : x(x), y(y){};
 
 	point() = default;
 };
 
-class motion_node {
+class motion_node
+{
 public:
 	// double get_tangent_angle(point p);
 	point get_closest_point(point current);
@@ -32,13 +35,14 @@ public:
 	point get_start() { return a; }
 	point get_end() { return b; }
 
-	bool operator==(const motion_node& other) const {
+	bool operator==(const motion_node &other) const
+	{
 		return a == other.a && b == other.b;
 	}
 
-	motion_node(const point& a, const point& b) : a(a), b(b) {}
+	motion_node(const point &a, const point &b) : a(a), b(b) {}
 	motion_node() {}
-	~motion_node() = default;	
+	~motion_node() = default;
 
 private:
 	point a;
@@ -51,9 +55,11 @@ private:
 // 	linear_motion() = default;
 // };
 
-class profile {
+class profile
+{
 public:
-	profile(std::vector<point> p) : path(p) {
+	profile(std::vector<point> p) : path(p)
+	{
 		linear_velocity = 0;
 		angular_velocity = 0;
 		cur_angle = 0;
@@ -62,7 +68,7 @@ public:
 		m_path = std::vector<motion_node>();
 	};
 
-	profile() : linear_velocity(0), angular_velocity(0), cur_angle(0), tar_angle(0), distance(0), at_destination(false), path(std::vector<point>()), m_path(std::vector<motion_node>()) {};
+	profile() : linear_velocity(0), angular_velocity(0), cur_angle(0), tar_angle(0), distance(0), at_destination(false), path(std::vector<point>()), m_path(std::vector<motion_node>()){};
 
 	void follow_path();
 	void setCurrent(double new_x, double new_y) { current = point(new_x, new_y); }
@@ -84,5 +90,5 @@ private:
 
 	std::vector<point> path;
 	std::vector<motion_node> m_path;
-	point current; 
+	point current;
 };
