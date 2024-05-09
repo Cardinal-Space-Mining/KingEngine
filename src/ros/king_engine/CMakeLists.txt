@@ -14,6 +14,7 @@ find_package(path_plan REQUIRED)
 # find_package(rio_interface REQUIRED)
 find_package(sick_scan_xd REQUIRED)
 find_package(traversal REQUIRED)
+find_package(geometry_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -21,12 +22,12 @@ find_package(traversal REQUIRED)
 
 
 add_executable(main src/main.cpp src/subsystems/Collection.cpp src/subsystems/Hopper.cpp )
-ament_target_dependencies(main rclcpp custom_types)
+ament_target_dependencies(main rclcpp custom_types geometry_msgs)
 
 target_include_directories(main PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(main PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(main PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
 
 install(TARGETS main
   DESTINATION lib/${PROJECT_NAME})
