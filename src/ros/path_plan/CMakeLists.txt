@@ -24,11 +24,11 @@ else()
   MESSAGE(FATAL_ERROR "OpenCV installation not found")
 endif()
 
-add_executable(main src/main.cpp src/path_plan/pathplan.cpp)
-ament_target_dependencies(main rclcpp nav_msgs geometry_msgs)
+add_executable(nav_node src/main.cpp src/path_plan/pathplan.cpp)
+ament_target_dependencies(nav_node rclcpp nav_msgs geometry_msgs)
 
 if(OpenCV_FOUND)
-  target_link_libraries(main ${OpenCV_LIBS})
+  target_link_libraries(nav_node ${OpenCV_LIBS})
 endif()
 
 include(CheckIPOSupported)
@@ -36,20 +36,24 @@ check_ipo_supported(RESULT supported OUTPUT error)
 
 if( supported )
     message(STATUS "IPO / LTO enabled")
-    set_property(TARGET main PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_property(TARGET nav_node PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
     message(STATUS "IPO / LTO not supported: <${error}>")
 endif()
 
-target_include_directories(main
+target_include_directories(nav_node
   # PUBLIC
   #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   #   $<INSTALL_INTERFACE:include>
   PRIVATE ${EIGEN3_INCLUDE_DIR})
-target_compile_features(main PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(nav_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
-install(TARGETS main
+install(
+  TARGETS nav_node
   DESTINATION lib/${PROJECT_NAME})
+install(
+  DIRECTORY config launch
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

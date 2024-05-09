@@ -33,11 +33,13 @@ public:
 	static constexpr double DEFAULT_ROBOT_WIDTH = 0.8;
 	static constexpr int DEFAULT_TURN_COST = 0, DEFAULT_MIN_WEIGHT = 25;
 	static constexpr double DEFAULT_UPDATE_TIME_S = 0.5;
+	static const std::string DEFAULT_OUTPUT_FRAME_ID;
 
 	static const std::string ROBOT_WIDTH_PARAM_NAME;
 	static const std::string TURN_COST_PARAM_NAME;
 	static const std::string MIN_WEIGHT_PARAM_NAME;
 	static const std::string UPDATE_TIME_PARAM_NAME;
+	static const std::string OUTPUT_FRAME_PARAM_NAME;
 
 	// Constant state
 protected:
@@ -53,6 +55,8 @@ protected:
 	const float robot_width;
 	const int turn_cost, min_weight;
 
+	const std::string output_frame_id;
+
 	const rclcpp::TimerBase::SharedPtr periodic_publisher;
 
 	// Mutable state
@@ -64,4 +68,6 @@ protected:
 
 	bool new_dst = false;
 	bool new_map_data = false;
+
+
 };
