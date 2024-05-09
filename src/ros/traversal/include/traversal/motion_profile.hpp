@@ -19,13 +19,15 @@ struct point {
 	}
 
 	point(double x, double y) : x(x), y(y) {};
+
+	point() = default;
 };
 
 class motion_node {
 public:
-	virtual double get_tangent_angle(point p) = 0;
-	virtual point get_closest_point(point current) = 0;
-	virtual point get_target_from_distance(point current, double distance) = 0;
+	// double get_tangent_angle(point p);
+	point get_closest_point(point current);
+	point get_target_from_distance(point current, double distance);
 
 	point get_start() { return a; }
 	point get_end() { return b; }
@@ -34,34 +36,33 @@ public:
 		return a == other.a && b == other.b;
 	}
 
-protected:
 	motion_node(const point& a, const point& b) : a(a), b(b) {}
 	motion_node() {}
-	~motion_node() {}
+	~motion_node() = default;	
 
 private:
 	point a;
 	point b;
 };
 
-class linear_motion : public motion_node {
-public:
-	linear_motion(point a, point b) : motion_node(a, b) {}
-	linear_motion() = default;
-};
+// class linear_motion : public motion_node {
+// public:
+// 	linear_motion(point a, point b) : motion_node(a, b) {}
+// 	linear_motion() = default;
+// };
 
 class profile {
 public:
-	profile(std::vector<point>* path) : path(path) {
+	profile(std::vector<point> p) : path(p) {
 		linear_velocity = 0;
 		angular_velocity = 0;
 		cur_angle = 0;
 		tar_angle = 0;
 		at_destination = false;
-		m_path = nullptr;
+		m_path = std::vector<motion_node>();
 	};
 
-	profile() : linear_velocity(0), angular_velocity(0), cur_angle(0), tar_angle(0), distance(0), at_destination(false), path(nullptr), m_path(nullptr) {};
+	profile() : linear_velocity(0), angular_velocity(0), cur_angle(0), tar_angle(0), distance(0), at_destination(false), path(std::vector<point>()), m_path(std::vector<motion_node>()) {};
 
 	void follow_path();
 	void setCurrent(double new_x, double new_y) { current = point(new_x, new_y); }
@@ -81,7 +82,7 @@ private:
 	double final_angle;
 	bool at_destination;
 
-	std::vector<point>* path;
-	std::vector<motion_node>* m_path;
+	std::vector<point> path;
+	std::vector<motion_node> m_path;
 	point current; 
 };

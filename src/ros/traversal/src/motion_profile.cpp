@@ -1,4 +1,4 @@
-#include "motion_profile.hpp"
+#include "traversal/motion_profile.hpp"
 #define _USE_MATH_DEFINES
 #include <limits>	 //std::numeric_limits
 #include <algorithm> //std::min
@@ -21,7 +21,7 @@
 using namespace std;
 
 //------------Utility Functions----------
-double distance(point A, point B) {
+double find_distance(point A, point B) {
     return sqrt(pow(B.x - A.x, 2) + pow(B.y - A.y, 2));
 }
 
@@ -31,7 +31,7 @@ double distance(point A, point B) {
 //Prefer left dictates whether or not the point C should be left or right of the line segment AB
 point findCarrot(point A, point B, double hypotenuse, bool prefer_left = false) {
     // Calculate the distance between points A and B
-    double base_length = distance(A, B);
+    double base_length = find_distance(A, B);
 
     // Calculate the height of the right triangle (distance between point A and the line defined by B)
     double height = sqrt(pow(hypotenuse, 2) - pow(base_length, 2));
@@ -67,7 +67,7 @@ point findCarrotSamePoint(point A, point B, point C, double distance_CD, bool pr
     double vec_AB_y = B.y - A.y;
 
     // Calculate the length of vector AB
-    double length_AB = distance(A, B);
+    double length_AB = find_distance(A, B);
 
     // Normalize the vector AB to get the unit vector
     double unit_AB_x = vec_AB_x / length_AB;
@@ -88,8 +88,8 @@ point findCarrotSamePoint(point A, point B, point C, double distance_CD, bool pr
     // Check if point D lies outside the segment AB
     if ((D.x - A.x) * (D.x - B.x) > 0 || (D.y - A.y) * (D.y - B.y) > 0) {
         // If D is outside the segment, set it to the closest endpoint of the segment
-        double dist_to_A = distance(C, A);
-        double dist_to_B = distance(C, B);
+        double dist_to_A = find_distance(C, A);
+        double dist_to_B = find_distance(C, B);
         if (dist_to_A < dist_to_B) {
             D = A;
         }
@@ -106,7 +106,7 @@ point findCarrotSamePoint(point A, point B, point C, double distance_CD, bool pr
 //Compile the angular and linear velocity of the profile to form percentages for each tracks
 //Should return a pair of integers
 std::pair<double, double> profile::get_speed() {
-	return p(0.0, 0.0);
+	return std::pair<double, double>(0.0, 0.0);
 };
 
 
@@ -115,17 +115,15 @@ std::pair<double, double> profile::get_speed() {
 //-------------Profile methods-------------
 
 void profile::compile_path_linear(std::vector<point> path) {
-    if (this->path == nullptr) return;
-
     if (path.size() < 2) {
         std::cerr << "Path must contain at least 2 points for compilation." << std::endl;
         return;
     }
 
-    this->motion_path.clear();
+    m_path.clear();
 
     for (size_t i = 0; i < path.size() - 1; ++i) {
-        this->motion_path->push_back(std::make_shared<linear_motion>(path[i], path[i + 1]));
+        m_path.push_back(motion_node(path[i], path[i + 1]));
     }
 
     return;
@@ -143,10 +141,11 @@ void profile::compile_path_linear(std::vector<point> path) {
 */
 
 void profile::follow_path() {
-    if (this.path == nullptr) return;
-    if (this.m_path == nullptr) return;
+    //change to check if size is zero
+    if (path.size() == 0) return;
+    if (m_path.size() == 0) return;
 
-	motion_node curnode = m_path->front();
+	motion_node curnode = m_path.front();
 
     //Get the carrot point
 
@@ -154,22 +153,22 @@ void profile::follow_path() {
     
     //compare the current point to the target point
     //If the front of our path vector is also the end, then we don't want to do all this stuff because the last point is our final target
-    if (curnode.get_end() == target && m_path->front() != m_path.->end()) {
+    if (curnode.get_end() == target && m_path.size() > 1) {
         //Erase the first path from m_path
-        m_path->erase(m_path->front());
+        m_path.erase(m_path.begin());
 
-        curnode = m_path->front();
+        curnode = m_path.front(); //O(N) REMOVAL
 
         target = curnode.get_target_from_distance(current, distance);
     }
     
     //Assumes a normalized target angle
 	//if the closest point is the target 
-    this->cur_angle = setHeading(target);
+    setHeading(target);
 
     double headings[2] = { (tar_angle - 360 - cur_angle), (tar_angle + 360 - cur_angle) };
 
-    double shortestDiff = abs(tar_angle - current);
+    double shortestDiff = abs(tar_angle - cur_angle);
 
     for (int i = 0; i < 2; i++) {
        double t = abs(headings[i]);
@@ -178,7 +177,7 @@ void profile::follow_path() {
 
     //Get the actual distance away from the target. Useful for final approach, the 'stick' length is broken
     
-    double actual_distance = distance(this->current, target);
+    double actual_distance = find_distance(this->current, target);
 	//compare shortest target angle to the current angle, then adjust the linear & angular velocity based on the difference
     //If the difference in degrees is greater than 30, then do a point turn (linear velocity is zero)
     
@@ -225,7 +224,8 @@ void profile::setHeading(point target) {
 
 void profile::setTargetAngle(double target)
 {
-    double normal = target % 360;
+    // double normal = target % 360.0;
+    double normal = std::fmod(target, 360.0);
     if (normal < 0) {
         normal += 360;
     }
@@ -238,7 +238,7 @@ void profile::setTargetAngle(double target)
 void profile::pointTurn() {
     double headings[2] = { (final_angle - 360 - cur_angle), (final_angle + 360 - cur_angle) };
 
-    double shortestDiff = abs(final_angle - current);
+    double shortestDiff = abs(final_angle - cur_angle);
 
     for (int i = 0; i < 2; i++) {
         double t = abs(headings[i]);
@@ -249,7 +249,7 @@ void profile::pointTurn() {
     if (shortestDiff < 0) percentage = percentage * -1;
 
     this->linear_velocity = 0.0;
-    this->angular_velocity = percentage * ;
+    this->angular_velocity = percentage; //TODO ADD NEGATIVE PERCENTAGE
 }
 
 
@@ -258,12 +258,12 @@ void profile::pointTurn() {
 
 //-------------Linear Motion--------------
 
-double linear_motion::get_tangent_angle(point p) {
-    return atan2(b.y - a.y, b.x - a.x);
-}
+// double motion_node::get_tangent_angle(point p) {
+//     return atan2(b.y - a.y, b.x - a.x);
+// }
 
 
-point linear_motion::get_closest_point(const point& current) override {
+point motion_node::get_closest_point(const point current) {
     double x_diff = b.x - a.x;
     double y_diff = b.y - a.y;
     double t = ((current.x - a.x) * x_diff + (current.y - a.y) * y_diff) / (x_diff * x_diff + y_diff * y_diff);
@@ -281,14 +281,14 @@ point linear_motion::get_closest_point(const point& current) override {
 //Gets the target point that the carrot should point to. 
 //When interpreting this information, if the returned point is the same as point 'b' from this segment,
 //     assume that the distance does not hold then Move to the next segment
-point linear_motion::get_target_from_distance(point current, double distance) {
+point motion_node::get_target_from_distance(point current, double distance) {
     point closest = get_closest_point(current);
     
     point c = { 0, 0 };
 
     //Overloaded operator.
     if (current == closest) {
-        c = findCarrotSamePoint(this.a, this.b, closest, distance, true);
+        c = findCarrotSamePoint(a, b, closest, distance, true);
     }
     else {
         c = findCarrot(current, b, distance);

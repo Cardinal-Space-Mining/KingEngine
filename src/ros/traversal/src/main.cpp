@@ -12,7 +12,7 @@
 #include "custom_types/msg/location.hpp"
 #include "custom_types/msg/path.hpp"
 #include "custom_types/msg/map.hpp"
-#include "motion_profile.hpp"
+#include "traversal/motion_profile.hpp"
 
 
 using namespace std::chrono_literals;
@@ -24,14 +24,14 @@ class TraversalNode : public rclcpp::Node
 {
   public:
 
-    profile* motionProfile;
+
 
     TraversalNode()
-    : Node("traversal")
-    {
-      location_sub = this->create_subscription<custom_types::msg::Location>("location", 10, std::bind(&TraversalNode::location_change_cb, this, _1));
-      path_sub = this->create_subscription<custom_types::msg::Path>("path", 10, std::bind(&TraversalNode::path_change_cb, this, _1));
-      this->motionProfile = std::make_shared<profile>();
+    : Node("traversal"),
+      motionProfile(std::make_unique<profile>()),
+      path_sub(this->create_subscription<custom_types::msg::Path>("path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
+      location_sub(this->create_subscription<custom_types::msg::Location>("location", 10, std::bind(&TraversalNode::location_change_cb, this, _1)))
+      {
     }
 
 
@@ -54,6 +54,8 @@ class TraversalNode : public rclcpp::Node
       ros_bridge::on_path_change(cpath);
     }
 
+  private:
+    std::unique_ptr<profile> motionProfile;
     rclcpp::Subscription<custom_types::msg::Path>::SharedPtr path_sub;
     rclcpp::Subscription<custom_types::msg::Location>::SharedPtr location_sub;
 };
