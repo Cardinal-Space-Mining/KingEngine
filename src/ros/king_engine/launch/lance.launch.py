@@ -7,7 +7,6 @@ from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
-<<<<<<< HEAD
     current_pkg = FindPackageShare('king_engine')
     dlo_launch = IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
@@ -24,10 +23,6 @@ def generate_launch_description():
             }.items()
         )
     
-=======
-
-# sick_scan_xd
->>>>>>> main
     sick_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
