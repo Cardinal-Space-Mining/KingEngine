@@ -9,12 +9,14 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(custom_types REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(main src/main.cpp src/path_plan.cpp)
-ament_target_dependencies(main rclcpp custom_types)
+add_executable(main src/main.cpp src/motion_profile.cpp )
+ament_target_dependencies(main rclcpp custom_types geometry_msgs sensor_msgs)
 
 target_include_directories(main PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
