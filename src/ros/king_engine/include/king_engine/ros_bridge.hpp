@@ -1,9 +1,7 @@
 #pragma once
 
-namespace ros_bridge
-{
-    typedef struct Location
-    {
+namespace ros_bridge {
+    typedef struct Location {
         double x;
         double y;
     } Location;

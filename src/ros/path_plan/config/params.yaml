@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+
+    robot_width: 0.8
+    turn_cost: 0
+    min_weight: 25
+    update_time_s: 0.5
+
+    output_frame: "world"

@@ -223,7 +223,9 @@ public:
 			!GridUtils::inRange<IntT>(start, _zero, wsize) ||
 			!GridUtils::inRange<IntT>(end, _zero, wsize) ||
 			(_start_idx == _end_idx))
+		{
 			return This_T::Path{}; // empty path
+		}
 
 		this->resize(_area);
 		for (size_t i = 0; i < this->map.size(); i++)
@@ -269,6 +271,7 @@ public:
 				// make moves -- I didn't split out this method because we only have a single navigation method currently
 				const Eigen::Vector2<IntT>
 					_loc = GridUtils::gridLoc<X_Major, IntT>(_node.self_idx, wsize);
+
 				for (size_t i = 0; i < This_T::NUM_MOVES; i++)
 				{
 
@@ -306,6 +309,7 @@ public:
 						queue.push(&_neighbor);
 					}
 				}
+
 			}
 		}
 
@@ -331,7 +335,9 @@ protected:
 			_max = _b.cwiseMax(_a);
 
 		if (_area == 0 || a_idx >= _area || b_idx >= _area || a_idx == b_idx)
+		{
 			return sum;
+		}
 
 		if (_a.x() == _b.x())
 		{
@@ -436,4 +442,6 @@ protected:
 
 protected:
 	std::vector<Node> map;
+
+
 };
