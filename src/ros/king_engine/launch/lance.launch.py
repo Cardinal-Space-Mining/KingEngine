@@ -22,16 +22,16 @@ def get_MJPG_video_stream_from_serial_number(num: str) -> None | str:
             return video_streams[idx]
     raise RuntimeError(f"Video stream for serial number {num} not found")
         
-
-right_cam_sn = ""
-left_cam_sn = ""
-center_cam_sn = ""
+# serial_numbers = ("YLAF20221208V2","CSM15424", "YLAF20221208V1")
+right_cam_sn = "YLAF20221208V2"
+left_cam_sn = "YLAF20221208V1"
+center_cam_sn = "CSM15424"
 
 right_cam_stream = get_MJPG_video_stream_from_serial_number(right_cam_sn)
 left_cam_stream = get_MJPG_video_stream_from_serial_number(left_cam_sn)
 center_cam_stream = get_MJPG_video_stream_from_serial_number(center_cam_sn)
 
-RioSerialConn = ""
+RioSerialConn = "/dev/ttyS0"
 
 def generate_launch_description():
     current_pkg = FindPackageShare('king_engine')
