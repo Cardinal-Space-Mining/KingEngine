@@ -149,8 +149,8 @@ class ArucoEstimator():
                 z = inverserotmax[2][3]
                 cap.release()
 
-                self.init_position = np.array([x, y, z])
-                self.init_orientation = Rot.from_euler('xyz', (roll, pitch, yaw), degrees=True).as_matrix() # type: ignore
+                self.init_position = np.array([x, y, z]) @ np.inv(calibations[serial]['rot']) + calibations[serial]['pos']
+                self.init_orientation = Rot.from_euler('xyz', (roll, pitch, yaw), degrees=True).as_matrix() @ np.inv(calibations[serial]['rot']) # type: ignore
         except Exception as e:
             print(camera + " thread exception: " + str(e), end="")
 
