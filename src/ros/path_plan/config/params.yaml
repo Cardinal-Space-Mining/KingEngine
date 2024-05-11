@@ -6,4 +6,7 @@
     min_weight: 25
     update_time_s: 0.5
 
+    avoidance_zone_corner_x: 3.88
+    avoidance_zone_corner_y: 3.00
+
     output_frame: "world"

@@ -51,6 +51,9 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+#define avoidance_zone_p1 cv::Point()
+
+
 
 using namespace std::literals::chrono_literals;
 
@@ -61,22 +64,39 @@ const std::string PathPlanNode::TURN_COST_PARAM_NAME = "turn_cost";
 const std::string PathPlanNode::MIN_WEIGHT_PARAM_NAME = "min_weight";
 const std::string PathPlanNode::UPDATE_TIME_PARAM_NAME = "update_time_s";
 const std::string PathPlanNode::OUTPUT_FRAME_PARAM_NAME = "output_frame";
+const std::string PathPlanNode::AVOID_ZONE_X_PARAM_NAME = "avoidance_zone_corner_x";
+const std::string PathPlanNode::AVOID_ZONE_Y_PARAM_NAME = "avoidance_zone_corner_y";
+const std::string PathPlanNode::AVOID_ZONE_THICKNESS_PARAM_NAME = "avoidance_zone_barrier_thickness";
 
 PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   node_init(this->config_node()),
-							   lidar_data_sub(this->create_subscription<nav_msgs::msg::OccupancyGrid>("/ldrp/obstacle_grid", 1, std::bind(&PathPlanNode::lidar_change_cb, this, std::placeholders::_1))),
-							   dest_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/dst_pose", 1, std::bind(&PathPlanNode::destination_change_cb, this, std::placeholders::_1))),
-							   location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 1, std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1))),
-							   path_pub(this->create_publisher<nav_msgs::msg::Path>("/path", 1)),
-							   weight_map_pub(this->create_publisher<nav_msgs::msg::OccupancyGrid>("/nav_map", 1)),
+							   lidar_data_sub(this->create_subscription<nav_msgs::msg::OccupancyGrid>("obstacle_grid", 1, std::bind(&PathPlanNode::lidar_change_cb, this, std::placeholders::_1))),
+							   dest_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("target_pose", 1, std::bind(&PathPlanNode::destination_change_cb, this, std::placeholders::_1))),
+							   location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("current_pose", 1, std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1))),
+							   avoidance_zone_flag_sub(this->create_subscription<std_msgs::msg::Bool>("avoid_zone", 1, std::bind(&PathPlanNode::avoid_zone_flag_change_cb, this, std::placeholders::_1))),
+							   path_pub(this->create_publisher<nav_msgs::msg::Path>("/pathplan/nav_path", 1)),
+							   weight_map_pub(this->create_publisher<nav_msgs::msg::OccupancyGrid>("/pathplan/nav_map", 1)),
 							   robot_width(this->get_parameter(ROBOT_WIDTH_PARAM_NAME).as_double()),
 							   turn_cost(this->get_parameter(TURN_COST_PARAM_NAME).as_int()),
 							   min_weight(this->get_parameter(MIN_WEIGHT_PARAM_NAME).as_int()),
+							   avoidance_barrier_x(this->get_parameter(AVOID_ZONE_X_PARAM_NAME).as_double()),
+							   avoidance_barrier_y(this->get_parameter(AVOID_ZONE_Y_PARAM_NAME).as_double()),
+							   avoidance_barrier_thickness(this->get_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME).as_double()),
 							   output_frame_id(this->get_parameter(OUTPUT_FRAME_PARAM_NAME).as_string()),
 							   periodic_publisher(this->create_wall_timer(this->get_parameter(UPDATE_TIME_PARAM_NAME).as_double() * 1000ms, std::bind(&PathPlanNode::export_data, this)))
 
 {
 	RCLCPP_INFO(this->get_logger(), "PathPlan Node Initialization!");
+
+#define PRINT_PARAMS_ON_STARTUP
+#ifdef PRINT_PARAMS_ON_STARTUP
+    RCLCPP_INFO(this->get_logger(), "CONFIG PARAMETERS:\n"
+                                    "robot_width: %f\nturn_cost: %d\nmin_weight: %d\n"
+                                    "avoidance zones:\n\tcorner_x: %f\n\tcorner_y: %f\n\tbarrier_thickness: %d",
+                                    robot_width, turn_cost, min_weight,
+                                    avoidance_barrier_x, avoidance_barrier_y,
+									avoidance_barrier_thickness);
+#endif
 
 	// this->target_pose.position.x = 11.5;
 	// this->target_pose.position.y = -4.2;
@@ -97,10 +117,30 @@ void PathPlanNode::lidar_change_cb(const nav_msgs::msg::OccupancyGrid &map)
 	cv::Mat _data{_h, _w, CV_8UC1, this->weights.data.data()};
 	cv::Mat _dest = cv::Mat::zeros(cv::Size{_w, _h}, CV_8UC1);
 
+    const float
+        resolution = this->weights.info.resolution;
 	const int
-		kernel_diam = static_cast<int>(this->robot_width / this->weights.info.resolution) + 1; // actual computation requires half of robot width / res * 2 for diam, but the 0.5 and 2 cancel
+		kernel_diam = static_cast<int>(this->robot_width / resolution) + 1; // actual computation requires half of robot width / res * 2 for diam, but the 0.5 and 2 cancel
 	const cv::Size
 		kernel_size{kernel_diam, kernel_diam};
+
+	if (include_avoidance_zone) {
+		// Draws a vertical line that divides the navigation zone and offload zone
+		// defined by the top left corner of offload zone directly downwards to the bottom of the arena
+		// int x = (int)(this->avoidance_barrier_x*resolution);
+		// int y = (int)(this->avoidance_barrier_y*resolution);
+		// while(y < _h) {
+		//     _data.at<uint8_t>(x, y) = 255;
+		//     y++;
+		// }
+		cv::line(
+			_data,
+			cv::Point(this->avoidance_barrier_x*resolution, this->avoidance_barrier_y*resolution), // top left of avoidance zone
+			cv::Point(this->avoidance_barrier_x*resolution, _h - 1), // bottom left of avoidance zone
+			cv::Scalar(255),
+			this->avoidance_barrier_thickness,
+			cv::LINE_8);
+	}
 
 	cv::dilate(
 		_data,
@@ -134,6 +174,10 @@ void PathPlanNode::destination_change_cb(const geometry_msgs::msg::PoseStamped &
 	this->target_pose = msg.pose;
 
 	this->new_dst = true;
+}
+
+void PathPlanNode::avoid_zone_flag_change_cb(const std_msgs::msg::Bool &flag) {
+    this->include_avoidance_zone = flag.data;
 }
 
 void PathPlanNode::export_data()
@@ -198,7 +242,10 @@ bool PathPlanNode::config_node()
 	this->declare_parameter(ROBOT_WIDTH_PARAM_NAME, DEFAULT_ROBOT_WIDTH);
 	this->declare_parameter(TURN_COST_PARAM_NAME, DEFAULT_TURN_COST);
 	this->declare_parameter(MIN_WEIGHT_PARAM_NAME, DEFAULT_MIN_WEIGHT);
-	this->declare_parameter(UPDATE_TIME_PARAM_NAME, DEFAULT_UPDATE_TIME_S);
+    this->declare_parameter(UPDATE_TIME_PARAM_NAME, DEFAULT_UPDATE_TIME_S);
+    this->declare_parameter(AVOID_ZONE_X_PARAM_NAME, DEFAULT_AVOIDANCE_CORNER_X);
+    this->declare_parameter(AVOID_ZONE_Y_PARAM_NAME, DEFAULT_AVOIDANCE_CORNER_Y);
+	this->declare_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME, DEFAULT_AVOIDANCE_THICKNESS);
 	this->declare_parameter(OUTPUT_FRAME_PARAM_NAME, DEFAULT_OUTPUT_FRAME_ID);
 	return true;
 }
