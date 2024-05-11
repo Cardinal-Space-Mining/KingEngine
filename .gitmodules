@@ -13,3 +13,6 @@
 [submodule "src/ros/direct_lidar_odometry"]
 	path = src/ros/direct_lidar_odometry
 	url = https://github.com/Cardinal-Space-Mining/direct_lidar_odometry.git
+[submodule "src/ros/direct_lidar_inertial_odometry"]
+	path = src/ros/direct_lidar_inertial_odometry
+	url = git@github.com:Cardinal-Space-Mining/direct_lidar_inertial_odometry.git

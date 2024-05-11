@@ -11,3 +11,11 @@ def get_MJPG_video_stream_from_serial_number(num: str) -> None | str:
     for idx, res in enumerate(results):
         if num in res and 'MJPG' in res:
             return video_streams[idx]
+        
+from linuxpy.video.device import Device
+
+with Device.from_id(0) as cam:
+    for i, frame in enumerate(cam):
+        print(f"frame #{i}: {len(frame)} bytes")
+        if i > 9:
+            break
