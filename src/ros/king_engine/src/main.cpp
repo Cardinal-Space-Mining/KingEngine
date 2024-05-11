@@ -23,12 +23,6 @@ using std::placeholders::_1;
 
 static constexpr double PI{ atan(1) * 4 };
 
-// BoundingBox UCF_MINING_ZONE(tlx, tly, brx, bry, true);
-// BoundingBox UCF_BERM_ZONE(cntrx, cntry, width, height, false);
-const BoundingBox UCF_MINING_ZONE(3.88, 3.5, 6.88, 3.5, true);
-// TODO update actual x and y coord of berm zone
-const BoundingBox UCF_BERM_ZONE(5.8, 1.2, 2, 0.7, false);
-
 class BoundingBox {
 	public:
 	// if corners, mining zone, else berm zone
@@ -46,9 +40,16 @@ class BoundingBox {
 		}
 	}
 	double tlx, tly, brx, bry;
-}
+};
 // tlxtlybry byryx
 // bool mining = true;
+
+// BoundingBox UCF_MINING_ZONE(tlx, tly, brx, bry, true);
+// BoundingBox UCF_BERM_ZONE(cntrx, cntry, width, height, false);
+const BoundingBox UCF_MINING_ZONE(3.88, 3.5, 6.88, 3.5, true);
+// TODO update actual x and y coord of berm zone
+const BoundingBox UCF_BERM_ZONE(5.8, 1.2, 2, 0.7, false);
+
 
 class KingEngineNode : public rclcpp::Node
 {
@@ -81,7 +82,7 @@ private:
 	}
 	
 	static std::vector<ObjectiveNode> get_objectives_from_bounding_box(BoundingBox bb, int x_divisions, int y_divisions, double theta, OpMode op) {
-		std::vector<ObjectiveNode> result();
+		std::vector<ObjectiveNode> result{};
 		double dx = (bb.brx - bb.tlx) / (float)(x_divisions+1);
 		double dy = (bb.bry - bb.tly) / (float)(y_divisions+1);
 		for (double y = bb.tly - dy/2.0; y > bb.bry; y += dy) {
@@ -89,11 +90,12 @@ private:
 				result.emplace_back(ObjectiveNode{x, y, theta, op});
 			}
 		}
+		return result;
 	}
 
 	void combine_keypoints(const std::vector<ObjectiveNode> &mining, const std::vector<ObjectiveNode> &offload) {
 		assert(mining.size() == offload.size());
-		for (int i = 0; i < mining.size(); i++) {
+		for (size_t i = 0; i < mining.size(); i++) {
 			this->objectives.emplace_back(mining[i]);
 			this->objectives.emplace_back(offload[i]);
 		}
@@ -107,10 +109,10 @@ private:
 		target.pose.position.x = std::get<0>(this->objectives[this->objective_idx]);
 		target.pose.position.y = std::get<1>(this->objectives[this->objective_idx]);
 		target.pose.position.z = 0.0;
-		target.pose.orientation.w = cos(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
+		target.pose.orientation.w = cos(std::get<2>(this->objectives[this->objective_idx]) * 0.5);
 		target.pose.orientation.x = 0.0;
 		target.pose.orientation.y = 0.0;
-		target.pose.orientation.z = sin(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
+		target.pose.orientation.z = sin(std::get<2>(this->objectives[this->objective_idx]) * 0.5);
 
 		this->destination_pub->publish(target);
 	}
@@ -124,7 +126,7 @@ public:
 		// path_pub = this->create_publisher<nav_msgs::msg::Path>("path", 10);
 		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("");
 		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("");
-		this->start_offload_service = this->create_client<custom_tyes::srv::StartOffload>("");
+		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("");
 
 		this->combine_keypoints(
 			get_objectives_from_bounding_box(UCF_MINING_ZONE, 5, 3, 90, OpMode::MINING),
@@ -162,8 +164,8 @@ public:
 						// handle going out of mining mode
 						if(current_objective != OpMode::MINING) {	// exit mining mode
 							// stop mining service
-							custom_types::srv::StopMining::Request::SharedPtr request = std::make_shared<custom_types::srv::StopMining>();
-							custom_types::srv::StopMining::Response::SharedPtr response = this->stop_mining_service->send_async_request(request);
+							auto request = std::make_shared<custom_types::srv::StopMining::Request>();
+							auto response = this->stop_mining_service->async_send_request(request);
 							rclcpp::spin_until_future_complete(this->shared_from_this(), response);		// we don't really care about the return value
 						}
 						// initializations for the next stage occur after this switch case, so break
@@ -174,8 +176,8 @@ public:
 				}
 				case OpMode::OFFLOAD: {
 					// call the offload service
-					custom_types::srv::StartOffload::Request::SharedPtr request = std::make_shared<custom_types::srv::StartOffload>();
-					custom_types::srv::StartOffload::Response::SharedPtr response = this->start_offload_service->send_async_request(request);
+					auto request = std::make_shared<custom_types::srv::StartOffload::Request>();
+					auto response = this->start_offload_service->async_send_request(request);
 					rclcpp::spin_until_future_complete(this->shared_from_this(), response);		// we don't really care about the return value
 
 					this->objective_idx++;	// on offload finish
@@ -195,8 +197,8 @@ public:
 			// this block only ever runs if an operation finished and we need to process an initialization for the next stage
 			switch(current_objective) {
 				case OpMode::MINING: {	// handle going into mining mode
-					custom_types::srv::StartMining::Request::SharedPtr request = std::make_shared<custom_types::srv::StartMining>();
-					custom_types::srv::StartMining::Response::SharedPtr response = this->start_mining_service->send_async_request(request);
+					auto request = std::make_shared<custom_types::srv::StartMining::Request>();
+					auto response = this->start_mining_service->async_send_request(request);
 					rclcpp::spin_until_future_complete(this->shared_from_this(), response);		// we don't really care about the return value
 					return;
 				}
@@ -220,7 +222,7 @@ protected:
 	rclcpp::Client<custom_types::srv::StopMining>::SharedPtr stop_mining_service;
 	rclcpp::Client<custom_types::srv::StartOffload>::SharedPtr start_offload_service;
 
-	const std::vector<ObjectiveNode> objectives = KSC_KEYPOINTS;
+	std::vector<ObjectiveNode> objectives{};
 	size_t objective_idx{ 0 };
 
 	double

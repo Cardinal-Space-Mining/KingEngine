@@ -7,9 +7,8 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(custom_types REQUIRED)
 find_package(rclcpp REQUIRED)
-
+find_package(custom_types REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(path_plan REQUIRED)
 # find_package(rio_interface REQUIRED)

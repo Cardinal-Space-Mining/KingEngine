@@ -18,6 +18,7 @@
 // #include "custom_types/msg/map.hpp"
 #include "traversal/motion_profile.hpp"
 
+
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
@@ -52,14 +53,14 @@ public:
     this->on_location_change(pose.pose.position.x, pose.pose.position.y, e.yaw * (180.0 / 3.141592653589793238463));
   }
 
-  void path_change_cb(const custom_types::msg::Path &path)
+  void path_change_cb(const nav_msgs::msg::Path &path)
   {
     RCLCPP_INFO(this->get_logger(), "%s", "Recieved new path");
-    std::vector<point> cpath(path.path.size());
-    for (size_t i = 0; i < path.path.size(); i++)
+    std::vector<point> cpath(path.poses.size());
+    for (size_t i = 0; i < path.poses.size(); i++)
     {
-      cpath[i].x = path.path[i].x;
-      cpath[i].y = path.path[i].y;
+      cpath[i].x = path.poses[i].pose.position.x;
+      cpath[i].y = path.poses[i].pose.position.y;
     }
     this->on_path_change(cpath);
   }
@@ -123,7 +124,7 @@ public:
     double leftVelocity = 0.0;
     double rightVelocity = 0.0;
 
-    double temp_velocity = max_velocity * linear;
+    // double temp_velocity = max_velocity * linear;  // unused
     if (linear == 0.0) { //If our linear velocity is 0, then do a pure point turn
       if (angular < 0) { //counterclockwise 
       //   leftVelocity = max_velocity * angular;
@@ -151,7 +152,7 @@ public:
 
 private:
   std::unique_ptr<profile> motionProfile;
-  rclcpp::Subscription<custom_types::msg::Path>::SharedPtr path_sub;
+  rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr location_sub;
   rclcpp::Client<custom_types::srv::SetTrackVelocity>::SharedPtr tracks;
 };
