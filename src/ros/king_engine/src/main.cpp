@@ -64,7 +64,7 @@ const BoundingBox UCF_BERM_ZONE(5.8, 1.2, 2, 0.7, false);
 
 class BoundingBox {
 	public:
-	// if corners mining zone, else berm zone
+	// if corners, mining zone, else berm zone
 	BoundingBox(double _x1, double _y1, double _x2, double _y2, bool corners) {
 		if (corners) {
 			tlx = _x1;
@@ -124,7 +124,7 @@ private:
 		}
 	}
 
-	void combine_keypoints(std::vector<ObjectiveNode> mining, std::vector<ObjectiveNode> offload) {
+	void combine_keypoints(const std::vector<ObjectiveNode> &mining, const std::vector<ObjectiveNode> &offload) {
 		assert(mining.size() == offload.size());
 		for (int i = 0; i < mining.size(); i++) {
 			this->objectives.emplace_back(mining[i]);
@@ -156,10 +156,25 @@ public:
 		}
 
 		OpMode current_objective = std::get<3>(this->objectives[this->objective_idx]);
-		for(;;) {	// sry about this :|
+		while(true) {	// sry about this :|
 			switch(current_objective) {
 				case OpMode::TRAVERSAL: {
-					// need to assign destination if this is the first iteration!?
+					// assign destination if this is the first iteration
+          if (this->objective_idx == 0) {
+            geometry_msgs::msg::PoseStamped target;
+
+            target.header.frame_id = "world";
+            target.header.stamp = this->get_clock()->now();
+            target.pose.position.x = std::get<0>(this->objectives[this->objective_idx]);
+            target.pose.position.y = std::get<1>(this->objectives[this->objective_idx]);
+            target.pose.position.z = 0.0;
+            target.pose.orientation.w = cos(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
+            target.pose.orientation.x = 0.0;
+            target.pose.orientation.y = 0.0;
+            target.pose.orientation.z = sin(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
+
+            this->destination_pub->publish(target);
+          }
 					if(pose_inrange(msg.pose, this->objectives[this->objective_idx] /** add epsilon params here (uses defaults without) */ )) {
 						this->objective_idx++;
 						current_objective = std::get<3>(this->objectives[this->objective_idx]);
@@ -188,6 +203,7 @@ public:
 				}
 				case OpMode::OFFLOAD: {
 					// call the offload service -- are we supposed to wait for this to finish and then immediately move to the next objective?
+          // -YEs
 					custom_types::srv::StartOffload::Request::SharedPtr request = std::make_shared<custom_types::srv::StartOffload>();
 					custom_types::srv::StartOffload::Response::SharedPtr response = this->start_offload_service->send_async_request(request);
 					rclcpp::spin_until_future_complete(this->shared_from_this(), response);		// we don't really care about the return value
@@ -199,6 +215,7 @@ public:
 				case OpMode::FINISHED: {
 					// send command to disable robot? (or do an emote/hit the griddy)?
 					// falls through to return
+          return;
 				}
 				default: {
 					return;
