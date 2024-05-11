@@ -14,11 +14,19 @@ import subprocess
 
 class Transformer(Node):
     def __init__(self):
-        super().__init__('overthruster') # type: ignore
+        super().__init__('Transformer') # type: ignore
 
         time.sleep(10) # Waiting for DLIO to launch
         
         self._logger.info(f"Starting aruco pose estimation")
+
+        self.subscription = self.create_subscription(
+            PoseStamped,
+            '/dlio/odom_node/pose',
+            self.listener_callback,
+            10
+        )
+        self.publisher_ = self.create_publisher(PoseStamped, '/adjusted_pose', 10)
 
         # SINED: get initial pose using aruco
         est = ArucoEstimator()
@@ -34,13 +42,6 @@ class Transformer(Node):
 
         self.init_position = position
         self.init_orientation = orientation
-        self.subscription = self.create_subscription(
-            PoseStamped,
-            '/dlio/odom_node/pose',
-            self.listener_callback,
-            10
-        )
-        self.publisher_ = self.create_publisher(PoseStamped, '/adjusted_pose', 10)
 
         self._logger.info(f"Started transformer node at position {position} and orientation {orientation}")
 

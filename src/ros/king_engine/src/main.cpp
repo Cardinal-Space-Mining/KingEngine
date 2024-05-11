@@ -23,8 +23,8 @@ Location cached_location;
 class KingEngineNode : public rclcpp::Node {
   public:
     KingEngineNode() : Node("king_engine") {
-      location_sub = this->create_subscription<custom_types::msg::Location>("location", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
-      destination_pub = this->create_publisher<custom_types::msg::Location>("destination", 10);
+      location_sub = this->create_subscription<custom_types::msg::Location>("/adjusted_pose", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
+      destination_pub = this->create_publisher<custom_types::msg::Location>("/dst_pose", 10);
     }
     void location_change_cb(const custom_types::msg::Location& msg) {
       RCLCPP_INFO(this->get_logger(), "Recieved location: (%F, %F)", msg.x, msg.y);

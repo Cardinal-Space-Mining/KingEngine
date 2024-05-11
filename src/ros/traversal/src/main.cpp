@@ -18,7 +18,7 @@
 #include "traversal/motion_profile.hpp"
 
 using namespace std::chrono_literals;
-using std::placeholders::_1
+using std::placeholders::_1;
 
 class TraversalNode : public rclcpp::Node
 {
@@ -26,8 +26,8 @@ public:
   TraversalNode()
       : Node("traversal"),
         motionProfile(std::make_unique<profile>()),
-        path_sub(this->create_subscription<custom_types::msg::Path>("path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
-        location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("location", 10, std::bind(&TraversalNode::location_change_cb, this, _1))),
+        path_sub(this->create_subscription<custom_types::msg::Path>("/path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
+        location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 10, std::bind(&TraversalNode::location_change_cb, this, _1))),
         tracks(this->create_client<custom_types::srv::SetTrackVelocity>("set_track_velocity"))
   {
     while (!tracks->wait_for_service(250ms))
@@ -39,6 +39,7 @@ public:
       }
       RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
     }
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Traversal Node Launched");
   }
 
   void location_change_cb(const geometry_msgs::msg::PoseStamped &pose)
@@ -115,8 +116,8 @@ public:
     double max_velocity = 750;
     //set the velocities here
 
-    double linear = motionProfile.getLinearVelocity();
-    double anglular = motionProfile.getAngularVelocity();
+    double linear = motionProfile->getLinearVelocity();
+    double angular = motionProfile->getAngularVelocity();
 
     double leftVelocity = 0.0;
     double rightVelocity = 0.0;

@@ -9,13 +9,13 @@
 
   <depend>rclcpp</depend>
   <depend>custom_types</depend>
-  <depend>direct_lidar_odometry</depend>
-  <depend>path_plan</depend>
-  <depend>rio_interface</depend>
-  <depend>sick_scan_xd</depend>
-  <depend>traversal</depend>
-  <depend>sick_perception</depend>
-  <depend>video_publisher</depend>
+  <!-- <depend>direct_lidar_odometry</depend> -->
+  <!-- <depend>path_plan</depend> -->
+  <!-- <depend>rio_interface</depend> -->
+  <!-- <depend>sick_scan_xd</depend> -->
+  <!-- <depend>traversal</depend> -->
+  <!-- <depend>sick_perception</depend> -->
+  <!-- <depend>video_publisher</depend> -->
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
@@ -24,5 +24,8 @@
 
   <export>
     <build_type>ament_cmake</build_type>
+    <launch_ros>
+      <file>launch/lance.launch.py</file>
+    </launch_ros>
   </export>
 </package>
