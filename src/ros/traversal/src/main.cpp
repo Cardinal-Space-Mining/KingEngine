@@ -9,16 +9,17 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include <nav_msgs/msg/path.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include "custom_types/srv/set_track_velocity.hpp"
-#include "custom_types/msg/location.hpp"
-#include "custom_types/msg/path.hpp"
-#include "custom_types/msg/map.hpp"
+// #include "custom_types/msg/location.hpp"
+// #include "custom_types/msg/path.hpp"
+// #include "custom_types/msg/map.hpp"
 #include "traversal/motion_profile.hpp"
 
 using namespace std::chrono_literals;
-using std::placeholders::_1
+using std::placeholders::_1;
 
 class TraversalNode : public rclcpp::Node
 {
@@ -26,7 +27,7 @@ public:
   TraversalNode()
       : Node("traversal"),
         motionProfile(std::make_unique<profile>()),
-        path_sub(this->create_subscription<custom_types::msg::Path>("path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
+        path_sub(this->create_subscription<nav_msgs::msg::Path>("path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
         location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("location", 10, std::bind(&TraversalNode::location_change_cb, this, _1))),
         tracks(this->create_client<custom_types::srv::SetTrackVelocity>("set_track_velocity"))
   {
@@ -72,11 +73,11 @@ public:
     if (rclcpp::spin_until_future_complete(this->shared_from_this(), result) ==
         rclcpp::FutureReturnCode::SUCCESS)
     {
-      return false;
+      return result.get()->return_value == 0;
     }
     else
     {
-      return result.get()->return_value == 0;
+      return false;
     }
   }
 
@@ -90,11 +91,11 @@ public:
     if (rclcpp::spin_until_future_complete(this->shared_from_this(), result) ==
         rclcpp::FutureReturnCode::SUCCESS)
     {
-      return false;
+      return result.get()->return_value == 0;
     }
     else
     {
-      return result.get()->return_value == 0;
+      return false;
     }
   }
 

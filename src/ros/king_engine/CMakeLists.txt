@@ -9,10 +9,11 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(custom_types REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(path_plan REQUIRED)
+# find_package(direct_lidar_odometry REQUIRED)
+# find_package(path_plan REQUIRED)
 # find_package(rio_interface REQUIRED)
-find_package(sick_scan_xd REQUIRED)
-find_package(traversal REQUIRED)
+# find_package(sick_scan_xd REQUIRED)
+# find_package(traversal REQUIRED)
 find_package(geometry_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -20,7 +21,7 @@ find_package(geometry_msgs REQUIRED)
 
 
 
-add_executable(main src/main.cpp src/subsystems/Collection.cpp src/subsystems/Hopper.cpp )
+add_executable(main src/main.cpp) # src/subsystems/Collection.cpp src/subsystems/Hopper.cpp
 ament_target_dependencies(main rclcpp custom_types geometry_msgs)
 
 target_include_directories(main PUBLIC

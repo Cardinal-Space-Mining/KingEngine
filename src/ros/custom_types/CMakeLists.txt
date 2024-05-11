@@ -10,10 +10,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/Location.msg"
-  "msg/Map.msg"
-  "msg/Path.msg"
-  "msg/Pose.msg"
+  # "msg/Location.msg"
+  # "msg/Map.msg"
+  # "msg/Path.msg"
+  # "msg/Pose.msg"
   "srv/SetTrackVelocity.srv"
   "srv/StartMining.srv"
   "srv/StartOffload.srv"

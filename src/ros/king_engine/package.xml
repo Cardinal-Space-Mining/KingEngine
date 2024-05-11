@@ -12,7 +12,7 @@
   <!-- <depend>direct_lidar_odometry</depend> -->
   <depend>path_plan</depend>
   <depend>geometry_msgs</depend>
-  <depend>sick_scan_xd</depend>
+  <!-- <depend>sick_scan_xd</depend> -->
   <depend>traversal</depend>
   <depend>sick_perception</depend>
   <depend>video_publisher</depend>
