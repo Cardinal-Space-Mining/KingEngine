@@ -15,7 +15,6 @@ find_package(path_plan REQUIRED)
 # find_package(rio_interface REQUIRED)
 # find_package(sick_scan_xd REQUIRED)
 # find_package(traversal REQUIRED)
-
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
