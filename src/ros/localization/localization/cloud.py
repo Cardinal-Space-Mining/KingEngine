@@ -10,7 +10,6 @@ class CloudSub(Node):
     def __init__(self):
         super().__init__('imu_subscriber')
         self.r = R.from_euler('xyz', (0, 200, 240), degrees=True).as_matrix()
-        print(self.r)
         self.cloud_subscription = self.create_subscription(
             PointCloud2,
             '/cloud_all_fields_fullframe',
@@ -18,6 +17,7 @@ class CloudSub(Node):
             10
         )
         self.publisher_ = self.create_publisher(PointCloud2, '/filtered_cloud', 10)
+        self._logger.info(f"Localization.cloud initialized")
 
     def cloud_callback(self, msg):
         points = rnp.numpify(msg)

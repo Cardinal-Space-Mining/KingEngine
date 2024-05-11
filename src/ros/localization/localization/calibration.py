@@ -93,5 +93,6 @@ def calibrate_fisheye(img_folder_path):
 
     return K, D, mtx
 
-print(sys.argv)
-calibrate_pinhole('./pinhole_images', '*', 'jpg', 25)
+if __name__ == "__main__":
+    print(sys.argv)
+    calibrate_pinhole('./pinhole_images', '*', 'jpg', 25)

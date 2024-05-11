@@ -7,16 +7,31 @@ from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 import subprocess
 import re
-from constants import aruco_positions, calibations
+from localization.constants import aruco_positions, calibations
 from threading import Thread
 import time
 import subprocess
 
 class Transformer(Node):
-    def __init__(self, init_position, init_orientation):
+    def __init__(self):
         super().__init__('overthruster') # type: ignore
-        self.init_position = init_position
-        self.init_orientation = init_orientation
+
+        time.sleep(10) # Waiting for DLIO to launch
+
+        # SINED: get initial pose using aruco
+        est = ArucoEstimator()
+        try:
+            while not est.sined():
+                time.sleep(.1)
+        except KeyboardInterrupt:
+            est.kill()
+            exit()
+        position, orientation = est.get_init()
+        print('SINED')
+
+
+        self.init_position = position
+        self.init_orientation = orientation
         self.subscription = self.create_subscription(
             PoseStamped,
             '/dlio/odom_node/pose',
@@ -24,6 +39,8 @@ class Transformer(Node):
             10
         )
         self.publisher_ = self.create_publisher(PoseStamped, '/adjusted_pose', 10)
+
+        self._logger.info(f"Started transformer node at position {position} and orientation {orientation}")
 
     def listener_callback(self, msg):
         position = (np.array([
@@ -146,45 +163,53 @@ class ArucoEstimator():
     def kill(self):
         self.init_position = 'die'
 
-
-# SINED: get initial pose using aruco
-est = ArucoEstimator()
-try:
-    while not est.sined():
-        time.sleep(.1)
-except KeyboardInterrupt:
-    est.kill()
-    exit()
-position, orientation = est.get_init()
-print('SINED')
-
-# SEELED: start DLIO
-try:
-    cloud_filter = subprocess.Popen(
-        'python /home/gavin/CSM/localization_ws/cloud.py',
-        shell=True,
-        executable="/bin/bash"
-    )
-    imu_filter = subprocess.Popen(
-        'python /home/gavin/CSM/localization_ws/imu.py',
-        shell=True,
-        executable="/bin/bash"
-    )
-    dlio = subprocess.Popen(
-        'source /home/gavin/CSM/csmdlio_ws/install/setup.bash && ros2 launch direct_lidar_inertial_odometry dlio.launch.py rviz:=false pointcloud_topic:=/filtered_cloud imu_topic:=/filtered_imu',
-        shell=True,
-        executable="/bin/bash"
-    )
-    print('SEELED')
-
-# DELIVERED: start pose transformation node
+def main():
     rclpy.init()
-    minimal_subscriber = Transformer(position, orientation)
+    minimal_subscriber = Transformer()
     rclpy.spin(minimal_subscriber)
     print('DELIVERED')
     minimal_subscriber.destroy_node()
     rclpy.shutdown()
-except:
-    subprocess.run(['kill', '-9 ', str(dlio.pid)])
-    subprocess.run(['kill', '-9 ', str(cloud_filter.pid)])
-    subprocess.run(['kill', '-9 ', str(imu_filter.pid)])
+
+
+# # SINED: get initial pose using aruco
+# est = ArucoEstimator()
+# try:
+#     while not est.sined():
+#         time.sleep(.1)
+# except KeyboardInterrupt:
+#     est.kill()
+#     exit()
+# position, orientation = est.get_init()
+# print('SINED')
+
+# # SEELED: start DLIO
+# try:
+#     cloud_filter = subprocess.Popen(
+#         'python /home/gavin/CSM/localization_ws/cloud.py',
+#         shell=True,
+#         executable="/bin/bash"
+#     )
+#     imu_filter = subprocess.Popen(
+#         'python /home/gavin/CSM/localization_ws/imu.py',
+#         shell=True,
+#         executable="/bin/bash"
+#     )
+#     dlio = subprocess.Popen(
+#         'source /home/gavin/CSM/csmdlio_ws/install/setup.bash && ros2 launch direct_lidar_inertial_odometry dlio.launch.py rviz:=false pointcloud_topic:=/filtered_cloud imu_topic:=/filtered_imu',
+#         shell=True,
+#         executable="/bin/bash"
+#     )
+#     print('SEELED')
+
+# # DELIVERED: start pose transformation node
+#     rclpy.init()
+#     minimal_subscriber = Transformer()
+#     rclpy.spin(minimal_subscriber)
+#     print('DELIVERED')
+#     minimal_subscriber.destroy_node()
+#     rclpy.shutdown()
+# except:
+#     subprocess.run(['kill', '-9 ', str(dlio.pid)])
+#     subprocess.run(['kill', '-9 ', str(cloud_filter.pid)])
+#     subprocess.run(['kill', '-9 ', str(imu_filter.pid)])
