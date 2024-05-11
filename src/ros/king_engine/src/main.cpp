@@ -23,39 +23,6 @@ using std::placeholders::_1;
 
 static constexpr double PI{ atan(1) * 4 };
 
-/* This example creates a subclass of Node and uses std::bind() to register a
- * member function as a callback from the timer. */
-
-// std::queue<Location> offload_locations({
-//   {4.65, 0},
-//   {4.65, 1},
-//   {5.035, 0},
-//   {5.035, 1},
-//   {5.42, 0},
-//   {5.42, 1},
-//   {5.805, 0},
-//   {5.805, 1},
-//   {6.19, 0},
-//   {6.19, 1},
-//   {6.575, 0},
-//   {6.575, 1}
-// });
-
-// std::queue<Location> mining_locations({ // needs changing
-//   {4.65, 0},
-//   {4.65, 1},
-//   {5.035, 0},
-//   { 5.035, 1},
-//   { 5.42, 0},
-//   { 5.42, 1},
-//   { 5.805, 0},
-//   { 5.805, 1},
-//   { 6.19, 0},
-//   { 6.19, 1},
-//   { 6.575, 0},
-//   { 6.575,  1}
-// });
-
 // BoundingBox UCF_MINING_ZONE(tlx, tly, brx, bry, true);
 // BoundingBox UCF_BERM_ZONE(cntrx, cntry, width, height, false);
 const BoundingBox UCF_MINING_ZONE(3.88, 3.5, 6.88, 3.5, true);
@@ -131,7 +98,23 @@ private:
 			this->objectives.emplace_back(offload[i]);
 		}
 	}
-	
+
+	void publish_destination() {
+		geometry_msgs::msg::PoseStamped target;
+
+		target.header.frame_id = "world";
+		target.header.stamp = this->get_clock()->now();
+		target.pose.position.x = std::get<0>(this->objectives[this->objective_idx]);
+		target.pose.position.y = std::get<1>(this->objectives[this->objective_idx]);
+		target.pose.position.z = 0.0;
+		target.pose.orientation.w = cos(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
+		target.pose.orientation.x = 0.0;
+		target.pose.orientation.y = 0.0;
+		target.pose.orientation.z = sin(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
+
+		this->destination_pub->publish(target);
+	}
+
 
 public:
 	KingEngineNode() : Node("king_engine")
@@ -147,6 +130,10 @@ public:
 			get_objectives_from_bounding_box(UCF_MINING_ZONE, 5, 3, 90, OpMode::MINING),
 			get_objectives_from_bounding_box(UCF_BERM_ZONE, 5, 3, 90, OpMode::OFFLOAD)
 		);
+
+		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL) {
+			this->publish_destination();
+		}
 	}
 	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
 	{
@@ -156,25 +143,9 @@ public:
 		}
 
 		OpMode current_objective = std::get<3>(this->objectives[this->objective_idx]);
-		while(true) {	// sry about this :|
+		while(true) {
 			switch(current_objective) {
 				case OpMode::TRAVERSAL: {
-					// assign destination if this is the first iteration
-          if (this->objective_idx == 0) {
-            geometry_msgs::msg::PoseStamped target;
-
-            target.header.frame_id = "world";
-            target.header.stamp = this->get_clock()->now();
-            target.pose.position.x = std::get<0>(this->objectives[this->objective_idx]);
-            target.pose.position.y = std::get<1>(this->objectives[this->objective_idx]);
-            target.pose.position.z = 0.0;
-            target.pose.orientation.w = cos(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
-            target.pose.orientation.x = 0.0;
-            target.pose.orientation.y = 0.0;
-            target.pose.orientation.z = sin(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
-
-            this->destination_pub->publish(target);
-          }
 					if(pose_inrange(msg.pose, this->objectives[this->objective_idx] /** add epsilon params here (uses defaults without) */ )) {
 						this->objective_idx++;
 						current_objective = std::get<3>(this->objectives[this->objective_idx]);
@@ -202,8 +173,7 @@ public:
 					}
 				}
 				case OpMode::OFFLOAD: {
-					// call the offload service -- are we supposed to wait for this to finish and then immediately move to the next objective?
-          // -YEs
+					// call the offload service
 					custom_types::srv::StartOffload::Request::SharedPtr request = std::make_shared<custom_types::srv::StartOffload>();
 					custom_types::srv::StartOffload::Response::SharedPtr response = this->start_offload_service->send_async_request(request);
 					rclcpp::spin_until_future_complete(this->shared_from_this(), response);		// we don't really care about the return value
@@ -215,7 +185,7 @@ public:
 				case OpMode::FINISHED: {
 					// send command to disable robot? (or do an emote/hit the griddy)?
 					// falls through to return
-          return;
+					return;
 				}
 				default: {
 					return;
@@ -231,19 +201,7 @@ public:
 					return;
 				}
 				case OpMode::TRAVERSAL: {	// send next target
-					geometry_msgs::msg::PoseStamped target;
-
-					target.header.frame_id = "world";
-					target.header.stamp = this->get_clock()->now();
-					target.pose.position.x = std::get<0>(this->objectives[this->objective_idx]);
-					target.pose.position.y = std::get<1>(this->objectives[this->objective_idx]);
-					target.pose.position.z = 0.0;
-					target.pose.orientation.w = cos(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
-					target.pose.orientation.x = 0.0;
-					target.pose.orientation.y = 0.0;
-					target.pose.orientation.z = sin(std::get<3>(this->objectives[this->objective_idx]) * 0.5);
-
-					this->destination_pub->publish(target);
+					this->publish_destination();
 					return;
 				}
 				default: {
