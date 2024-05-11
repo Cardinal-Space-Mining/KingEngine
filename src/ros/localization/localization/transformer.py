@@ -17,6 +17,8 @@ class Transformer(Node):
         super().__init__('overthruster') # type: ignore
 
         time.sleep(10) # Waiting for DLIO to launch
+        
+        self._logger.info(f"Starting aruco pose estimation")
 
         # SINED: get initial pose using aruco
         est = ArucoEstimator()
@@ -27,7 +29,7 @@ class Transformer(Node):
             est.kill()
             exit()
         position, orientation = est.get_init()
-        print('SINED')
+        self._logger.info(f"Finished aruco pose estimation")
 
 
         self.init_position = position
