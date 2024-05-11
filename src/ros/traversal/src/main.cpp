@@ -40,6 +40,7 @@ public:
       }
       RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
     }
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Traversal Node Launched");
   }
 
   void location_change_cb(const geometry_msgs::msg::PoseStamped &pose)
@@ -116,8 +117,8 @@ public:
     double max_velocity = 750;
     //set the velocities here
 
-    double linear = motionProfile.getLinearVelocity();
-    double anglular = motionProfile.getAngularVelocity();
+    double linear = motionProfile->getLinearVelocity();
+    double angular = motionProfile->getAngularVelocity();
 
     double leftVelocity = 0.0;
     double rightVelocity = 0.0;

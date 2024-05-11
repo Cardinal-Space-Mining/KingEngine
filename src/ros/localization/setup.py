@@ -13,14 +13,16 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='sigma',
+    maintainer='william',
     maintainer_email='willmoiser@gmail.com',
     description='TODO: Package description',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'main = localization.main:main'
+            'transformer = localization.transformer:main',
+            'imu = localization.imu:main',
+            'cloud = localization.cloud:main', 
         ],
     },
 )

@@ -7,11 +7,66 @@ from launch_ros.substitutions import FindPackageShare
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 import usb_diff
 
+import subprocess, re
+
+def get_video_streams() -> tuple[str]:
+    files = subprocess.run(("ls", "/dev"), capture_output=True).stdout.decode().split('\n')
+    pattern = re.compile('video\d+')
+    return tuple(f"/dev/{x}" for x in files if pattern.match(x))
+
+def get_MJPG_video_stream_from_serial_number(num: str) -> None | str:
+    video_streams: tuple[str] = get_video_streams()
+    results: tuple[str] = tuple(subprocess.run(("v4l2-ctl", f"--device={stream}", "--all"), capture_output=True).stdout.decode() for stream in video_streams)
+    for idx, res in enumerate(results):
+        if num in res and 'MJPG' in res:
+            return video_streams[idx]
+    raise RuntimeError(f"Video stream for serial number {num} not found")
+        
+
+right_cam_sn = ""
+left_cam_sn = ""
+center_cam_sn = ""
+
+right_cam_stream = get_MJPG_video_stream_from_serial_number(right_cam_sn)
+left_cam_stream = get_MJPG_video_stream_from_serial_number(left_cam_sn)
+center_cam_stream = get_MJPG_video_stream_from_serial_number(center_cam_sn)
+
+RioSerialConn = ""
 
 def generate_launch_description():
     current_pkg = FindPackageShare('king_engine')
 
+# Localization:
+    dlio_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+             PathJoinSubstitution([
+                    FindPackageShare('direct_lidar_inertial_odometry'),
+                    'launch',
+                    'dlio.launch.py'
+                ])
+        ),
+        launch_arguments={'rviz': 'false', 'pointcloud_topic': '/filtered_cloud', 'imu_topic': '/filtered_imu'}.items()
+    )
     
+    cloud_node = Node(
+            package='localization',
+            executable='cloud',
+            name='cloud',
+        )
+    
+    imu_node = Node(
+            package='localization',
+            executable='imu',
+            name='imu',
+        )
+
+    transformer_node = Node(
+            package='localization',
+            executable='transformer',
+            name='transformer',
+        )
+
+# sick_scan_xd
     sick_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -43,34 +98,23 @@ def generate_launch_description():
         )
 
 # sick_perception
-    perception_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('sick_perception'),
-                'launch',
-                'ldrp.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'pointcloud_topic' : '/cloud_all_fields_fullframe',
-            'pose_topic' : '/dlo/odom_node/pose'
-        }.items()
-    )
+    perception_launch = Node(
+		name = 'obstacle_detection',
+		package = 'sick_perception',
+		executable = 'ldrp_node',
+		output = 'screen',
+		parameters = [PathJoinSubstitution([FindPackageShare('sick_perception'), 'config', 'params.yaml'])],
+		remappings = [
+			('scan', "/cloud_all_fields_fullframe"),
+			('pose', "/adjusted_pose")
+		]
+	)
 
 # path_planning
-    path_plan_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('path_plan'),
-                'launch',
-                'nav.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'obstacles_topic' : '/ldrp/obstacle_grid',
-            'pose_topic' : '/dlo/odom_node/pose',
-            'destination_topic' : 'king_engine/destination'
-        }.items()
+    path_plan_launch = Node(
+        package = 'path_plan',
+        executable = 'nav_node',
+        output = 'screen'
     )
 
 # king_engine
@@ -78,10 +122,6 @@ def generate_launch_description():
         package = 'king_engine',
         executable = 'main',
         output = 'screen',
-        remappings=[
-            ('location', '/dlo/odom_node/pose'),
-            ('destination', '/king_engine/destination')
-        ]
     )
 
 # traversal
@@ -89,21 +129,31 @@ def generate_launch_description():
         package = 'traversal',
         executable = 'main',
         output = 'screen',
-        remappings=[
-            ('location', '/dlo/odom_node/pose'),
-            ('path', '/path_plan/nav_path')
-        ]
+    )
+
+# rio_interface
+    rio_interface_node = Node(
+        package = 'rio_interface',
+        executable = "rio_interface",
+        output = 'screen',
+        parameters=[{ "serial_fd": RioSerialConn}]
     )
 
     video_publisher_node = Node(
         package = 'video_publisher',
         executable = 'vpub',
-        output = 'screen'
+        output = 'screen',
+        parameters=[{ "right_cam_path": right_cam_stream},
+                    {"left_cam_path": left_cam_stream},
+                    {"center_cam_path": center_cam_stream}]
     )
 
     return LaunchDescription([
+        dlio_launch,
+        cloud_node,
+        imu_node,
+        transformer_node,
         sick_launch,
-        dlo_launch,
         perception_launch,
         path_plan_launch,
         king_engine_node,

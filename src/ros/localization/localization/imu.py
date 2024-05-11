@@ -21,6 +21,7 @@ class ImuSubscriber(Node):
         self.orientation = None
         self.angular_velocity = None
         self.linear_acceleration = None
+        self._logger.info(f"Localization.imu initialized")
 
     def listener_callback(self, msg):
         self.header = msg.header

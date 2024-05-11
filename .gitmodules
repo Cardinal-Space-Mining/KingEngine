@@ -10,6 +10,6 @@
 [submodule "src/ros/rio_interface/rio_interface/PiSerialControl"]
 	path = src/ros/rio_interface/rio_interface/PiSerialControl
 	url = https://github.com/Cardinal-Space-Mining/PiSerialControl.git
-[submodule "src/ros/direct_lidar_odometry"]
-	path = src/ros/direct_lidar_odometry
-	url = https://github.com/Cardinal-Space-Mining/direct_lidar_odometry.git
+[submodule "src/ros/direct_lidar_inertial_odometry"]
+	path = src/ros/direct_lidar_inertial_odometry
+	url = https://github.com/Cardinal-Space-Mining/direct_lidar_inertial_odometry

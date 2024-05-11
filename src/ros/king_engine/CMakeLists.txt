@@ -9,12 +9,13 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(custom_types REQUIRED)
 find_package(rclcpp REQUIRED)
-# find_package(direct_lidar_odometry REQUIRED)
-# find_package(path_plan REQUIRED)
+
+find_package(geometry_msgs REQUIRED)
+find_package(path_plan REQUIRED)
 # find_package(rio_interface REQUIRED)
 # find_package(sick_scan_xd REQUIRED)
 # find_package(traversal REQUIRED)
-find_package(geometry_msgs REQUIRED)
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -29,8 +30,9 @@ target_include_directories(main PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_features(main PUBLIC c_std_99 cxx_std_20)  # Require C99 and C++17
 
-install(TARGETS main
-  DESTINATION lib/${PROJECT_NAME})
+install(TARGETS main DESTINATION lib/${PROJECT_NAME})
+
+install( DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 install( DIRECTORY launch
          DESTINATION share/${PROJECT_NAME} 
