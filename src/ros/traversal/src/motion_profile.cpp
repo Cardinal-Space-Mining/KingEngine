@@ -173,11 +173,13 @@ void profile::follow_path()
         target = curnode.get_target_from_distance(current, distance);
     }
 
+    //Our current node should always be stick distance away from the target. If they are the same, then we are done
     if(current == target) {
         this->at_destination = true;
         this->pointTurn();
         return;
     }
+
     // Assumes a normalized target angle
     // if the closest point is the target
     setTargetHeading(target);
@@ -185,43 +187,26 @@ void profile::follow_path()
     double headings[2] = {(tar_angle - 360 - cur_angle), (tar_angle + 360 - cur_angle)};
 
     double shortestDiff = abs(tar_angle - cur_angle);
+    double leftright = sin(tar_angle - cur_angle);
 
     for (int i = 0; i < 2; i++)
     {
         double t = abs(headings[i]);
         if (t < shortestDiff)
             shortestDiff = t;
+            leftright = sin(headings[i]);
     }
 
-    // Get the actual distance away from the target. Useful for final approach, the 'stick' length is broken
-
-    double actual_distance = find_distance(this->current, target);
     // compare shortest target angle to the current angle, then adjust the linear & angular velocity based on the difference
     // If the difference in degrees is greater than 30, then do a point turn (linear velocity is zero)
 
-    double percentage = abs(shortestDiff / 360);
-    if (shortestDiff < 0)
+    double percentage = abs(shortestDiff / 180);
+
+    if (leftright < 0)
         percentage = percentage * -1;
 
-    // if (!at_destination)
-    // {
-        if (shortestDiff > 30)
-        {
-            this->linear_velocity = 0.0;
-            this->angular_velocity = percentage;
-        }
-        else
-        {
-            this->linear_velocity = (1 - percentage); // If we are at our current heading, go 100%
-            this->angular_velocity = percentage;
-        }
-    // }
-    // else
-    // {
-    //     // If we are finished, then this method should not be setting the velocities to anything.
-    //     linear_velocity = 0.0;
-    //     angular_velocity = 0.0;
-    // }
+   
+    angular_velocity = percentage;
 
     return;
 }
@@ -258,20 +243,27 @@ void profile::pointTurn()
     double headings[2] = {(final_angle - 360 - cur_angle), (final_angle + 360 - cur_angle)};
 
     double shortestDiff = abs(final_angle - cur_angle);
+    double leftright = sin(tar_angle - cur_angle);
+
 
     for (int i = 0; i < 2; i++)
     {
         double t = abs(headings[i]);
         if (t < shortestDiff)
             shortestDiff = t;
+            leftright = sin(headings[i]);
+
     }
 
-    double percentage = abs(shortestDiff / 360);
-    if (shortestDiff < 0)
+
+    double percentage = abs(shortestDiff / 180);
+
+    if (leftright < 0)
         percentage = percentage * -1;
 
-    this->linear_velocity = 0.0;
-    this->angular_velocity = percentage; // TODO ADD NEGATIVE PERCENTAGE
+    angular_velocity = percentage;
+    
+
 }
 
 //-------------Linear Motion--------------

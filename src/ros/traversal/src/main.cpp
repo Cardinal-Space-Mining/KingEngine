@@ -101,7 +101,7 @@ public:
   void on_path_change(std::vector<point> &points)
   {
     //update everything?
-    motionProfile->compile_path_linear(points);
+    motionProfile->compile_path_linear(*points);
   }
 
   void on_location_change(double x_meters, double y_meters, double yaw_degrees)
@@ -110,40 +110,47 @@ public:
     motionProfile->setCurrent(x_meters, y_meters);
     motionProfile->setCurrentHeading(yaw_degrees);
 
-    motionProfile->follow_path();
+    motionProfile->follow_path(); //storing the velocity multipliers  here
 
-    double max_velocity = 750;
+    double max_velocity = motionProfile.getMaxVelocity();;
     //set the velocities here
 
-    double linear = motionProfile.getLinearVelocity();
-    double anglular = motionProfile.getAngularVelocity();
+    double angular = motionProfile.getAngularVelocity();
+            //---------------DIIFF CONST---------------
+    double diffConst = 80;
 
-    double leftVelocity = 0.0;
-    double rightVelocity = 0.0;
+    double v1 = motionProfile.getMaxVelocity() - (angular * diffConst);
+    double v2 = motionProfile.getMaxVelocity() + (angular * diffConst);
 
-    double temp_velocity = max_velocity * linear;
-    if (linear == 0.0) { //If our linear velocity is 0, then do a pure point turn
-      if (angular < 0) { //counterclockwise 
-      //   leftVelocity = max_velocity * angular;
-      //   rightVelocity = max_velocity * angular * -1; //Angular is negative, so we want right to be positive
-      // } else { //clockwise
-        leftVelocity = max_velocity * angular;
-        rightVelocity = max_velocity * angular * -1; //Anguilar is positive, we want the right to be negative
-      }
-    } else { //Or else we are doing a 'regular' turn with some forward throttle. Angular velocity determines which side gets more push
-    if (angular < 0) {
-      leftVelocity = max_velocity * linear * abs(1 - angular);
-      rightVelocity = max_velocity * linear * abs(angular);
-    } else {
-      leftVelocity = max_velocity * linear * angular;
-      rightVelocity = max_velocity * linear * (1 - angular);
+    if (-.3 < angular && angular < 0.3 && !motionProfile.getAtDestination()) { //If we are within 30% (54 degrees) of our target, then we should be doing a point turn, unless we are at our destination
+
+      if (angular >= 0) {
+            set_right_track_velo(v1);
+            set_left_track_velo(v2);
+          } else {
+            set_right_track_velo(v2);
+            set_left_track_velo(v1);
+          }
+    } else { // set the velocities such that they are 
+        if (angular >=0) {
+          set_right_track_velo((max_velocity * angular * -1));
+          set_left_track_velo(max_velocity * angular);
+        }
+        else {
+          set_right_track_velo(max_velocity * angular);
+          set_left_track_velo(max_velocity * angular * -1);
+        }
     }
-     
-    }
-
-    set_right_track_velo(rightVelocity);
-
-    set_left_track_velo(leftVelocity);
+    else { // set the velocities such that they are 
+        if (angular >=0) {
+          set_right_track_velo((max_velocity * angular * -1));
+          set_left_track_velo(max_velocity * angular);
+        }
+        else {
+          set_right_track_velo(max_velocity * angular);
+          set_left_track_velo(max_velocity * angular * -1);
+        }
+    
     
   }
 
