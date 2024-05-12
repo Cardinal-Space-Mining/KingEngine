@@ -67,17 +67,6 @@ def generate_launch_description():
         )
 
 # Localization:
-    dlio_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-             PathJoinSubstitution([
-                    FindPackageShare('direct_lidar_inertial_odometry'),
-                    'launch',
-                    'dlio.launch.py'
-                ])
-        ),
-        launch_arguments={'rviz': 'false', 'pointcloud_topic': '/filtered_cloud', 'imu_topic': '/filtered_imu'}.items()
-    )
-    
     cloud_node = Node(
             package='localization',
             executable='cloud',
