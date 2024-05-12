@@ -124,6 +124,8 @@ class VideoPublisher(Node):
 
     def destroy_node(self):
         self.right_capture.release()
+        self.left_capture.release()
+        self.center_capture.release()
         super().destroy_node()
 
     @staticmethod
