@@ -45,13 +45,6 @@ IMX179_MJPG_settings = [
     }
 ]
 
-CAMERA_RIGHT = "/dev/video4"
-CAMERA_LEFT = "/dev/video2"
-CAMERA_CENTER = "/dev/video0"
-
-
-
-
 class VideoPublisher(Node):
 
     __RIGHT_CAM_PARAM_NAME__ = "right_cam_path"
