@@ -168,7 +168,6 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        dlio_launch,
         cloud_node,
         imu_node,
         transformer_node,
