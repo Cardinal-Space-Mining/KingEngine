@@ -37,17 +37,6 @@ def generate_launch_description():
     current_pkg = FindPackageShare('king_engine')
 
 # Localization:
-    dlio_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-             PathJoinSubstitution([
-                    FindPackageShare('direct_lidar_inertial_odometry'),
-                    'launch',
-                    'dlio.launch.py'
-                ])
-        ),
-        launch_arguments={'rviz': 'false', 'pointcloud_topic': '/filtered_cloud', 'imu_topic': '/filtered_imu'}.items()
-    )
-    
     cloud_node = Node(
             package='localization',
             executable='cloud',
@@ -86,19 +75,19 @@ def generate_launch_description():
         )
 
 # sick_scan_xd
-    sick_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('sick_scan_xd'),
-                'launch',
-                'sick_multiscan.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'hostname': '10.11.11.3',
-            'udp_receiver_ip': '{hostIP}',
-        }.items()
-    )
+    # sick_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         PathJoinSubstitution([
+    #             FindPackageShare('sick_scan_xd'),
+    #             'launch',
+    #             'sick_multiscan.launch.py'
+    #         ])
+    #     ]),
+    #     launch_arguments={
+    #         'hostname': '10.11.11.3',
+    #         'udp_receiver_ip': '10.11.11.13',
+    #     }.items()
+    # )
 
 # direct_lidar_odometry
     dlo_launch = IncludeLaunchDescription(
@@ -158,23 +147,23 @@ def generate_launch_description():
         parameters=[{ "serial_fd": RioSerialConn}]
     )
 
-    video_publisher_node = Node(
-        package = 'video_publisher',
-        executable = 'vpub',
-        output = 'screen',
-        parameters=[{ "right_cam_path": right_cam_stream},
-                    {"left_cam_path": left_cam_stream},
-                    {"center_cam_path": center_cam_stream}]
-    )
+    # video_publisher_node = Node(
+    #     package = 'video_publisher',
+    #     executable = 'vpub',
+    #     output = 'screen',
+    #     parameters=[{ "right_cam_path": right_cam_stream},
+    #                 {"left_cam_path": left_cam_stream},
+    #                 {"center_cam_path": center_cam_stream}]
+    # )
 
     return LaunchDescription([
         cloud_node,
         imu_node,
         transformer_node,
-        sick_launch,
+        # sick_launch,
         perception_launch,
         path_plan_launch,
         king_engine_node,
         traversal_node,
-        video_publisher_node
+        # video_publisher_node
     ])

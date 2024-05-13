@@ -7,19 +7,73 @@ from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 import subprocess
 import re
-from localization.constants import aruco_positions, calibations
 from threading import Thread
 import time
 import subprocess
 
+aruco_positions = [
+    np.array([[
+        [10, 0, 0],
+        [190, 0, 0],
+        [190, 180, 0],
+        [10, 180, 0]
+    ]]),
+    np.array([[
+        [0, 0, 190],
+        [0, 0, 10],
+        [0, 180, 10],
+        [0, 180, 190]
+    ]]),
+]
+
+calibations = {
+    'YLAF20221208V1': {
+        'mtx': np.array([
+            [502.77264231,   0.,         322.89582315],
+            [  0.,         502.78152803, 241.45546177],
+            [  0.,           0.,           1.        ]
+        ]),
+        'dist': np.array([[ 0.19903941, -0.74796342,  0.00199075,  0.00354105,  0.87606197]]),
+        'pos': np.array([-276.617, 11.617, 23.941]),
+        'rot': Rot.from_euler('xyz', (-9.90, -20, 0), degrees=True).as_matrix()
+    },
+    'YLAF20221208V2': {
+        'mtx': np.array([
+            [521.06512431,   0.,         320.42556535],
+            [  0.,         521.28236255, 242.55116183],
+            [  0.,           0.,           1.        ]
+        ]),
+        'dist': np.array([[ 0.23879134, -0.94403776, -0.0017436, 0.00305515, 1.14485391]]),
+        'pos': np.array([276.617, 11.617, 23.941]),
+        'rot': Rot.from_euler('xyz', (-9.90, 20, 0), degrees=True).as_matrix()
+    },
+    'CSM15424': {
+        'mtx': np.array([
+            [525.08331471,   0.,         321.73028149],
+            [  0.,         524.34561131, 244.12181265],
+            [  0.,           0.,           1.        ]
+        ]),
+        'dist': np.array([[ 0.2334526, -0.87719634, 0.00268214, 0.00553653, 0.97017557]]),
+        'pos': np.array([0, 43.353, 52.462]),
+        'rot': Rot.from_euler('xyz', (-15, 0, 0), degrees=True).as_matrix()
+    },
+    '200901010001': {
+        'mtx': np.array([
+            [525.08331471,   0.,         321.73028149],
+            [  0.,         524.34561131, 244.12181265],
+            [  0.,           0.,           1.        ]
+        ]),
+        'dist': np.array([[ 0.2334526, -0.87719634, 0.00268214, 0.00553653, 0.97017557]]),
+        'pos': np.array([0, 0, 0]),
+        'rot': Rot.from_euler('xyz', (0, 0, 0), degrees=True).as_matrix()
+    }
+}
+
 class Transformer(Node):
-    def __init__(self):
-        super().__init__('Transformer') # type: ignore
-
-        time.sleep(10) # Waiting for DLIO to launch
-        
-        self._logger.info(f"Starting aruco pose estimation")
-
+    def __init__(self, init_position, init_orientation):
+        super().__init__('overthruster') # type: ignore
+        self.init_position = init_position
+        self.init_orientation = init_orientation
         self.subscription = self.create_subscription(
             PoseStamped,
             '/dlio/odom_node/pose',
@@ -27,23 +81,6 @@ class Transformer(Node):
             10
         )
         self.publisher_ = self.create_publisher(PoseStamped, '/adjusted_pose', 10)
-
-        # SINED: get initial pose using aruco
-        est = ArucoEstimator()
-        try:
-            while not est.sined():
-                time.sleep(.1)
-        except KeyboardInterrupt:
-            est.kill()
-            exit()
-        position, orientation = est.get_init()
-        self._logger.info(f"Finished aruco pose estimation")
-
-
-        self.init_position = position
-        self.init_orientation = orientation
-
-        self._logger.info(f"Started transformer node at position {position} and orientation {orientation}")
 
     def listener_callback(self, msg):
         position = (np.array([
@@ -78,8 +115,12 @@ class Transformer(Node):
 
 class ArucoEstimator():
     def get_camera_info(self):
-        endpoints = subprocess.run(("ls", "/dev"), capture_output=True).stdout.decode().split('\n')
-        cameras = [f"/dev/{x}" for x in endpoints if re.compile('video\d+').match(x)]
+        endpoints = subprocess.run(("v4l2-ctl", "--list-devices"), capture_output=True).stdout.decode().splitlines()
+        cameras = []
+        for line in endpoints:
+            if line != '' and line[0] == '\t':
+                cameras.append(line.replace('\t', ''))
+
         cams = []
         for camera in cameras:
             lines = subprocess.run(("v4l2-ctl", "-d", camera, "--info"), capture_output=True).stdout.decode().splitlines()
@@ -88,28 +129,33 @@ class ArucoEstimator():
                     _, serial = line.replace('\t', '').replace(' ', '').split(':')
                     cams.append((serial, camera))
                     break
-        return tuple(cams)    
+        return tuple(cams)
     
     def __init__(self):
         self.init_orientation = None
         self.init_position = None
-
+        rclpy.logging.get_logger("aruco").info("starting threads")
+        rclpy.logging.get_logger("aruco").info(str(self.get_camera_info()))
         for serial, camera in self.get_camera_info():
             Thread(target=self.camera_thead, args=(serial, camera)).start()
     
     def camera_thead(self, serial: str, camera: str):
         try:
+            rclpy.logging.get_logger("aruco").info("opening camera")
             cap = cv2.VideoCapture(camera)
             
+            rclpy.logging.get_logger("aruco").info("setting params")
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             cap.set(cv2.CAP_PROP_FPS, 60)
 
+            rclpy.logging.get_logger("aruco").info("dictionary")
             detector = cv2.aruco.ArucoDetector(
                 cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50),
                 cv2.aruco.DetectorParameters()
             )
 
+            rclpy.logging.get_logger("aruco").info("reading calibration")
             mtx = calibations[serial]['mtx']
             dist = calibations[serial]['dist']
 
@@ -120,7 +166,7 @@ class ArucoEstimator():
                 if corners == ():
                     continue
                 flat_corners = ids.flatten().tolist()
-                if flat_corners != [0, 1] and flat_corners != [1, 0] and flat_corners != [0]:
+                if flat_corners == []:
                     continue
 
                 img_points = []
@@ -131,6 +177,8 @@ class ArucoEstimator():
                         img_points.append(corners[0][0][i])
                         real_points.append(aruco_positions[0][0][i])
 
+                print(img_points)
+
                 real_points = np.array(real_points).astype(np.float32)
                 img_points = np.array(img_points).astype(np.float32)
 
@@ -138,9 +186,8 @@ class ArucoEstimator():
 
                 Rt = cv2.Rodrigues(rvec)[0]
                 R = Rt.transpose()
-                pos = -R * tvec #type: ignore
 
-                ZYX, jac = cv2.Rodrigues(rvec)
+                ZYX, _ = cv2.Rodrigues(rvec)
                 totalrotmax = np.array([[ZYX[0, 0], ZYX[0, 1], ZYX[0, 2], tvec[0][0]], [ZYX[1, 0], ZYX[1, 1], ZYX[1, 2], tvec[1][0]], [ZYX[2, 0], ZYX[2, 1], ZYX[2, 2], tvec[2][0]], [0, 0, 0, 1]])
                 inverserotmax = np.linalg.inv(totalrotmax)
 
@@ -152,10 +199,12 @@ class ArucoEstimator():
                 z = inverserotmax[2][3]
                 cap.release()
 
-                self.init_position = np.array([x, y, z]) @ np.inv(calibations[serial]['rot']) + calibations[serial]['pos']
-                self.init_orientation = Rot.from_euler('xyz', (roll, pitch, yaw), degrees=True).as_matrix() @ np.inv(calibations[serial]['rot']) # type: ignore
+                self.init_orientation = Rot.from_euler('xyz', (roll, pitch, yaw), degrees=True).as_matrix() @ calibations[serial]['rot']
+                self.init_position = np.array([x, y, z]) @ calibations[serial]['rot'] + calibations[serial]['pos']
         except Exception as e:
-            print(camera + " thread exception: " + str(e), end="")
+            rclpy.logging.get_logger("aruco").error(str(e))
+            cv2.destroyAllWindows()
+            
 
     def sined(self) -> bool:
         return self.init_orientation is not None
@@ -166,53 +215,43 @@ class ArucoEstimator():
     def kill(self):
         self.init_position = 'die'
 
+
 def main():
-    rclpy.init()
-    minimal_subscriber = Transformer()
-    rclpy.spin(minimal_subscriber)
-    print('DELIVERED')
-    minimal_subscriber.destroy_node()
-    rclpy.shutdown()
+    rclpy.logging.get_logger("aruco").info("aruco time!")
 
+    # SINED: get initial pose using transformed aruco vals
+    est = ArucoEstimator()
+    try:
+        while not est.sined():
+            time.sleep(.1)
+    except KeyboardInterrupt:
+        est.kill()
+        exit()
+    position, orientation = est.get_init()
+    # position = (position @ center_angle) + center_offset
+    # orientation = orientation @ center_angle
+    print(Rot.from_matrix(orientation).as_euler('xyz', degrees=True))
+    rclpy.logging.get_logger("aruco").info("SINED")
 
-# # SINED: get initial pose using aruco
-# est = ArucoEstimator()
-# try:
-#     while not est.sined():
-#         time.sleep(.1)
-# except KeyboardInterrupt:
-#     est.kill()
-#     exit()
-# position, orientation = est.get_init()
-# print('SINED')
+    # # SEELED: start DLIO
+    # try:
+    #     dlio = subprocess.Popen(
+    #         'source /home/po/dlio_ws/install/setup.bash && ros2 launch direct_lidar_inertial_odometry dlio.launch.py rviz:=false pointcloud_topic:=/filtered_cloud imu_topic:=/filtered_imu',
+    #         shell=True,
+    #         executable="/bin/bash"
+    #     )
+    #     rclpy.logging.get_logger("aruco").info("SEELED")
 
-# # SEELED: start DLIO
-# try:
-#     cloud_filter = subprocess.Popen(
-#         'python /home/gavin/CSM/localization_ws/cloud.py',
-#         shell=True,
-#         executable="/bin/bash"
-#     )
-#     imu_filter = subprocess.Popen(
-#         'python /home/gavin/CSM/localization_ws/imu.py',
-#         shell=True,
-#         executable="/bin/bash"
-#     )
-#     dlio = subprocess.Popen(
-#         'source /home/gavin/CSM/csmdlio_ws/install/setup.bash && ros2 launch direct_lidar_inertial_odometry dlio.launch.py rviz:=false pointcloud_topic:=/filtered_cloud imu_topic:=/filtered_imu',
-#         shell=True,
-#         executable="/bin/bash"
-#     )
-#     print('SEELED')
+    # # DELIVERED: start pose transformation node
+    #     rclpy.init()
+    #     minimal_subscriber = Transformer(position, orientation)
+    #     rclpy.spin(minimal_subscriber)
+    #     rclpy.logging.get_logger("aruco").info("DELIVERED")
+    #     minimal_subscriber.destroy_node()
+    #     rclpy.shutdown()
+    # except Exception as e:
+    #     print(e)
+    #     subprocess.run(['kill', '-9 ', str(dlio.pid)])
 
-# # DELIVERED: start pose transformation node
-#     rclpy.init()
-#     minimal_subscriber = Transformer()
-#     rclpy.spin(minimal_subscriber)
-#     print('DELIVERED')
-#     minimal_subscriber.destroy_node()
-#     rclpy.shutdown()
-# except:
-#     subprocess.run(['kill', '-9 ', str(dlio.pid)])
-#     subprocess.run(['kill', '-9 ', str(cloud_filter.pid)])
-#     subprocess.run(['kill', '-9 ', str(imu_filter.pid)])
+if __name__ == '__main__':
+    main()

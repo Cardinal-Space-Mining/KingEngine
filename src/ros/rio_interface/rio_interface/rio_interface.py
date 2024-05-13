@@ -3,7 +3,8 @@ import rclpy
 from rclpy.node import Node
 from custom_types.srv import SetTrackVelocity, StartMining, StopMining, StartOffload
 
-from .PiSerialControl.serial_api import SerialManager
+# from .PiSerialControl.serial_api import serial_api.SerialManager
+from .PiSerialControl import serial_api
 
 class RioInterface(Node):
 
@@ -25,28 +26,28 @@ class RioInterface(Node):
         # I am using this lock because I am not entirely sure about ROS2's threading model when dealing with the lower layers.
         self.serial_lock = Lock()
         device = self.get_parameter(RioInterface.__SERIAL_FD_PARAM__).get_parameter_value().string_value
-        self.serial_ctrler = SerialManager(device)
+        self.serial_ctrler = serial_api.SerialManager(device)
 
         self._logger.info(f"Launched rio_interface and bound to device {device}")
 
     def set_track_velo_callback(self, request, response):
         with self.serial_lock:
-            response.return_value = self.serial_ctrler._send_msg(SerialManager.MOTOR_CTRL, request.motor_number, request.velocity_turns_per_second)
+            response.return_value = self.serial_ctrler._send_msg(serial_api.SerialManager.MOTOR_CTRL, request.motor_number, request.velocity_turns_per_second)
         self._logger.debug(f"Handled set_track_velo_callback. Motor Number: {request.motor_number}. Velocity: {request.velocity_turns_per_second}")
 
     def start_mining_callback(self, _, response):
         with self.serial_lock:
-            response.return_value = self.serial_ctrler._send_msg_func(SerialManager.START_MINING_FUNC_NUM)
+            response.return_value = self.serial_ctrler._send_msg_func(serial_api.SerialManager.START_MINING_FUNC_NUM)
         self._logger.debug(f"Started Mining")
 
     def stop_mining_callback(self, _, response):
         with self.serial_lock:
-            response.return_value = self.serial_ctrler._send_msg_func(SerialManager.STOP_MINING_FUNC_NUM)
+            response.return_value = self.serial_ctrler._send_msg_func(serial_api.SerialManager.STOP_MINING_FUNC_NUM)
         self._logger.debug(f"Stopped Mining")
 
     def start_offload_callback(self, _, response):
         with self.serial_lock:
-            response.return_value = self.serial_ctrler._send_msg_func(SerialManager.STOP_OFFLOAD_FUNC_NUM)
+            response.return_value = self.serial_ctrler._send_msg_func(serial_api.SerialManager.STOP_OFFLOAD_FUNC_NUM)
         self._logger.debug(f"Stopped Mining")
 def main(args=None):
     rclpy.init(args=args)
