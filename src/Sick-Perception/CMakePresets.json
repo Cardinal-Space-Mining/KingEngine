@@ -1,0 +1,59 @@
+{
+	"version": 3,
+	"configurePresets": [
+		{
+			"name": "vscode-configure",
+			"displayName": "vscode",
+			"cacheVariables": {
+				"sickperception_VSCODE_CONFIGURE": "ON",
+				"sickperception_CXX_STANDARD": "17",
+				"sickperception_USE_WPILIB_TESTING": "ON",
+				"LDRP_ENABLE_LOGGING": "ON",
+				"LDRP_ENABLE_DEBUG_LOGGING": "ON",
+				"LDRP_ENABLE_SAFETY_CHECKS": "ON",
+				"LDRP_USE_UESIM_NT_INTERFACE": "OFF",
+				"LDRP_ENABLE_TUNING": "ON",
+				"LDRP_ENABLE_PROFILING": "ON"
+			}
+		},
+		{
+			"name": "live-release",
+			"displayName": "live-release",
+			"cacheVariables": {
+				"sickperception_USE_WPILIB_TESTING": "ON",
+				"LDRP_ENABLE_LOGGING": "ON",
+				"LDRP_ENABLE_DEBUG_LOGGING": "OFF",
+				"LDRP_ENABLE_SAFETY_CHECKS": "OFF",
+				"LDRP_USE_UESIM_NT_INTERFACE": "OFF",
+				"LDRP_ENABLE_TUNING": "ON",
+				"LDRP_ENABLE_PROFILING": "OFF"
+			}
+		},
+		{
+			"name": "live-debug",
+			"displayName": "live-debug",
+			"cacheVariables": {
+				"sickperception_USE_WPILIB_TESTING": "ON",
+				"LDRP_ENABLE_LOGGING": "ON",
+				"LDRP_ENABLE_DEBUG_LOGGING": "ON",
+				"LDRP_ENABLE_SAFETY_CHECKS": "ON",
+				"LDRP_USE_UESIM_NT_INTERFACE": "OFF",
+				"LDRP_ENABLE_TUNING": "ON",
+				"LDRP_ENABLE_PROFILING": "ON"
+			}
+		},
+		{
+			"name": "ue-sim",
+			"displayName": "uesim",
+			"cacheVariables": {
+				"sickperception_USE_WPILIB_TESTING": "ON",
+				"LDRP_ENABLE_LOGGING": "ON",
+				"LDRP_ENABLE_DEBUG_LOGGING": "ON",
+				"LDRP_ENABLE_SAFETY_CHECKS": "ON",
+				"LDRP_USE_UESIM_NT_INTERFACE": "ON",
+				"LDRP_ENABLE_TUNING": "ON",
+				"LDRP_ENABLE_PROFILING": "ON"
+			}
+		}
+	]
+}

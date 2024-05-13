@@ -1,0 +1,10 @@
+**build/*
+install/*
+.vs/*
+.vscode/*
+out/*
+logs/*
+Makefile
+CMakeSettings.json
+networktables.json
+log/*
