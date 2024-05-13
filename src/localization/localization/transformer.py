@@ -230,28 +230,27 @@ def main():
     position, orientation = est.get_init()
     # position = (position @ center_angle) + center_offset
     # orientation = orientation @ center_angle
-    print(Rot.from_matrix(orientation).as_euler('xyz', degrees=True))
     rclpy.logging.get_logger("aruco").info("SINED")
 
-    # # SEELED: start DLIO
-    # try:
-    #     dlio = subprocess.Popen(
-    #         'source /home/po/dlio_ws/install/setup.bash && ros2 launch direct_lidar_inertial_odometry dlio.launch.py rviz:=false pointcloud_topic:=/filtered_cloud imu_topic:=/filtered_imu',
-    #         shell=True,
-    #         executable="/bin/bash"
-    #     )
-    #     rclpy.logging.get_logger("aruco").info("SEELED")
+    # SEELED: start DLIO
+    try:
+        dlio = subprocess.Popen(
+            'source /home/gavin/CSM/KingEngine/install/setup.bash && ros2 launch direct_lidar_inertial_odometry dlio.launch.py rviz:=false pointcloud_topic:=/filtered_cloud imu_topic:=/filtered_imu',
+            shell=True,
+            executable="/bin/bash"
+        )
+        rclpy.logging.get_logger("aruco").info("SEELED")
 
-    # # DELIVERED: start pose transformation node
-    #     rclpy.init()
-    #     minimal_subscriber = Transformer(position, orientation)
-    #     rclpy.spin(minimal_subscriber)
-    #     rclpy.logging.get_logger("aruco").info("DELIVERED")
-    #     minimal_subscriber.destroy_node()
-    #     rclpy.shutdown()
-    # except Exception as e:
-    #     print(e)
-    #     subprocess.run(['kill', '-9 ', str(dlio.pid)])
+    # DELIVERED: start pose transformation node
+        rclpy.init()
+        minimal_subscriber = Transformer(position, orientation)
+        rclpy.spin(minimal_subscriber)
+        rclpy.logging.get_logger("aruco").info("DELIVERED")
+        minimal_subscriber.destroy_node()
+        rclpy.shutdown()
+    except Exception as e:
+        print(e)
+        subprocess.run(['kill', '-9 ', str(dlio.pid)])
 
 if __name__ == '__main__':
     main()

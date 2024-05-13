@@ -176,7 +176,7 @@ PerceptionNode::~PerceptionNode() {}
 
 void PerceptionNode::scan_cb(const sensor_msgs::msg::PointCloud2::ConstSharedPtr& scan) {
 	// this->sampler_mutex.lock();
-	RCLCPP_INFO(this->get_logger(), "Scan callback called!");
+	// RCLCPP_INFO(this->get_logger(), "Scan callback called!");
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 	pcl::fromROSMsg(*scan, *point_cloud);
@@ -188,12 +188,12 @@ void PerceptionNode::scan_cb(const sensor_msgs::msg::PointCloud2::ConstSharedPtr
 	const size_t current_nsamples = this->scan_sampler.getSamples().size();
 	this->sampler_mutex.unlock();
 
-	RCLCPP_INFO(this->get_logger(),
-		"\n\tScan sample timestamp (us): %ld"
-		"\n\tTotal scan samples: %ld",
-		ts,
-		current_nsamples
-	);
+	// RCLCPP_INFO(this->get_logger(),
+	// 	"\n\tScan sample timestamp (us): %ld"
+	// 	"\n\tTotal scan samples: %ld",
+	// 	ts,
+	// 	current_nsamples
+	// );
 	// this->sampler_mutex.unlock();
 
 }

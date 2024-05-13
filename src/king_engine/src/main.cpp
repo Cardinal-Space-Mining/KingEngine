@@ -249,8 +249,6 @@ protected:
 		mining_max_x,
 		mining_min_y,
 		mining_max_y;
-
-
 };
 
 
