@@ -21,13 +21,13 @@ def get_MJPG_video_stream_from_serial_number(num: str) -> None | str:
     raise RuntimeError(f"Video stream for serial number {num} not found")
         
 # serial_numbers = ("YLAF20221208V2","CSM15424", "YLAF20221208V1")
-right_cam_sn = "YLAF20221208V2"
-left_cam_sn = "YLAF20221208V1"
-center_cam_sn = "CSM15424"
+# right_cam_sn = "YLAF20221208V2"
+# left_cam_sn = "YLAF20221208V1"
+# center_cam_sn = "CSM15424"
 
-right_cam_stream = get_MJPG_video_stream_from_serial_number(right_cam_sn)
-left_cam_stream = get_MJPG_video_stream_from_serial_number(left_cam_sn)
-center_cam_stream = get_MJPG_video_stream_from_serial_number(center_cam_sn)
+# right_cam_stream = get_MJPG_video_stream_from_serial_number(right_cam_sn)
+# left_cam_stream = get_MJPG_video_stream_from_serial_number(left_cam_sn)
+# center_cam_stream = get_MJPG_video_stream_from_serial_number(center_cam_sn)
 
 RioSerialConn = "/dev/ttyS0"
 
@@ -53,19 +53,19 @@ def generate_launch_description():
         )
 
 # sick_scan_xd
-    sick_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('sick_scan_xd'),
-                'launch',
-                'sick_multiscan.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'hostname': '10.11.11.3',
-            'udp_receiver_ip': '{hostIP}',
-        }.items()
-    )
+    # sick_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         PathJoinSubstitution([
+    #             FindPackageShare('sick_scan_xd'),
+    #             'launch',
+    #             'sick_multiscan.launch.py'
+    #         ])
+    #     ]),
+    #     launch_arguments={
+    #         'hostname': '10.11.11.3',
+    #         'udp_receiver_ip': '10.11.11.13',
+    #     }.items()
+    # )
 
 # sick_perception
     perception_launch = Node(
@@ -109,24 +109,24 @@ def generate_launch_description():
         parameters=[{ "serial_fd": RioSerialConn}]
     )
 
-    video_publisher_node = Node(
-        package = 'video_publisher',
-        executable = 'vpub',
-        output = 'screen',
-        parameters=[{ "right_cam_path": right_cam_stream},
-                    {"left_cam_path": left_cam_stream},
-                    {"center_cam_path": center_cam_stream}]
-    )
+    # video_publisher_node = Node(
+    #     package = 'video_publisher',
+    #     executable = 'vpub',
+    #     output = 'screen',
+    #     parameters=[{ "right_cam_path": right_cam_stream},
+    #                 {"left_cam_path": left_cam_stream},
+    #                 {"center_cam_path": center_cam_stream}]
+    # )
 
     return LaunchDescription([
         cloud_node,
         imu_node,
         transformer_node,
-        sick_launch,
+        # sick_launch,
         perception_launch,
         path_plan_launch,
         king_engine_node,
         traversal_node,
         rio_interface_node,
-        video_publisher_node
+        # video_publisher_node
     ])
