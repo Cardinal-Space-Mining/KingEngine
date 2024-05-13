@@ -38,7 +38,7 @@ RioSerialConn = "/dev/ttyS0"
 def generate_launch_description():
     current_pkg = FindPackageShare('king_engine')
 
-# Localization:
+    # Localization:
     cloud_node = Node(
             package='localization',
             executable='cloud',
@@ -57,26 +57,7 @@ def generate_launch_description():
             name='transformer',
         )
 
-# Localization:
-    cloud_node = Node(
-            package='localization',
-            executable='cloud',
-            name='cloud',
-        )
-    
-    imu_node = Node(
-            package='localization',
-            executable='imu',
-            name='imu',
-        )
-
-    transformer_node = Node(
-            package='localization',
-            executable='transformer',
-            name='transformer',
-        )
-
-# sick_scan_xd
+    # # sick_scan_xd
     # sick_launch = IncludeLaunchDescription(
     #     PythonLaunchDescriptionSource([
     #         PathJoinSubstitution([
@@ -91,23 +72,7 @@ def generate_launch_description():
     #     }.items()
     # )
 
-# direct_lidar_odometry
-    dlo_launch = IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([
-                PathJoinSubstitution([
-                    FindPackageShare('direct_lidar_odometry'),
-                    'launch',
-                    'dlo.launch.py'
-                ])
-            ]),
-            launch_arguments={
-                'rvis': 'true',
-                'pointcloud_topic': '/cloud_all_fields_fullframe',
-                'imu_topic': '/sick_scansegment_xd/imu'
-            }.items()
-        )
-
-# sick_perception
+    # sick_perception
     perception_launch = Node(
 		name = 'obstacle_detection',
 		package = 'sick_perception',
@@ -115,33 +80,33 @@ def generate_launch_description():
 		output = 'screen',
 		parameters = [PathJoinSubstitution([FindPackageShare('sick_perception'), 'config', 'params.yaml'])],
 		remappings = [
-			('scan', "/cloud_all_fields_fullframe"),
+			('scan', "/filtered_points"),
 			('pose', "/adjusted_pose")
 		]
 	)
 
-# path_planning
+    # path_planning
     path_plan_launch = Node(
         package = 'path_plan',
         executable = 'nav_node',
         output = 'screen'
     )
 
-# king_engine
+    # king_engine
     king_engine_node = Node(
         package = 'king_engine',
         executable = 'main',
         output = 'screen',
     )
 
-# traversal
+    # traversal
     traversal_node = Node(
         package = 'traversal',
         executable = 'main',
         output = 'screen',
     )
 
-# rio_interface
+    # rio_interface
     rio_interface_node = Node(
         package = 'rio_interface',
         executable = "rio_interface",
@@ -149,15 +114,27 @@ def generate_launch_description():
         parameters=[{ "serial_fd": RioSerialConn}]
     )
 
+    # tf2
+    # ros2 run tf2_ros static_transform_publisher "0" "0" "0" "0" "0" "0" "map" "scan"
+    tf2_node = Node(
+        package = 'tf2_ros',
+        executable = "static_transform_publisher",
+        output = 'screen',
+        parameters = ["0.1", "0", "0", "0", "0.0", "0.0", "world", "base_link"],
+    )
+
+
     # video_publisher_node = Node(
     #     package = 'video_publisher',
     #     executable = 'vpub',
     #     output = 'screen',
-    #     parameters=[{ "right_cam_path": right_cam_stream},
+    #     parameters=[{ "right_cam_path": right_cam_streav
+    # m},
     #                 {"left_cam_path": left_cam_stream},
     #                 {"center_cam_path": center_cam_stream}]
     # )
 
+    # 
     return LaunchDescription([
         cloud_node,
         imu_node,
@@ -166,6 +143,7 @@ def generate_launch_description():
         perception_launch,
         path_plan_launch,
         king_engine_node,
-        traversal_node,
+        tf2_node,
+        # traversal_node,
         # video_publisher_node
     ])

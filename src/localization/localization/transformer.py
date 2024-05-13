@@ -87,14 +87,14 @@ class Transformer(Node):
             msg.pose.position.x,
             msg.pose.position.y,
             msg.pose.position.z
-        ]) @ self.init_orientation) + self.init_position # type: ignore
+        ])) # @ self.init_orientation) + self.init_position # type: ignore
         orientation = Rot.from_matrix(
             Rot.from_quat([
                 msg.pose.orientation.x,
                 msg.pose.orientation.y,
                 msg.pose.orientation.z,
                 msg.pose.orientation.w
-            ]).as_matrix() @ self.init_orientation
+            ]).as_matrix() # @ self.init_orientation
         ).as_quat() # type: ignore
 
         new_msg = PoseStamped()

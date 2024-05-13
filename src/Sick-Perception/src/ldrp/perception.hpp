@@ -71,7 +71,7 @@ protected:
 		// bool
 		// 	scan_matching_skip_invalid = false;
 		double
-			scan_matching_history_range_s = 0.25,
+			scan_matching_history_range_s = 1.0,
 			map_resolution_cm		= 5.,
 			voxel_size_cm			= 3.,
 			max_z_thresh_cm			= 100.,

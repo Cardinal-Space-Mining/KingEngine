@@ -50,6 +50,7 @@ class ImuSubscriber(Node):
         
         new_msg.header = msg.header
         new_msg.header.stamp = self.get_clock().now().to_msg()
+        new_msg.header.frame_id = 'odom'
 
         print(time.monotonic())
 
