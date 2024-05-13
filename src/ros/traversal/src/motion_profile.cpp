@@ -30,7 +30,7 @@ double find_distance(point A, point B)
 // Point B is the point along the line segment
 // Hypotenuse is the length of the 'stick'
 // Prefer left dictates whether or not the point C should be left or right of the line segment AB
-point findCarrot(point A, point B, double hypotenuse, bool prefer_left = false)
+point findCarrot(point A, point B, double hypotenuse, bool prefer_left = true)
 {
     // Calculate the distance between points A and B
     double base_length = find_distance(A, B);
@@ -108,15 +108,6 @@ point findCarrotSamePoint(point A, point B, point C, double distance_CD, bool pr
     return D;
 }
 
-//------------Motion Profile-------------
-
-// Compile the angular and linear velocity of the profile to form percentages for each tracks
-// Should return a pair of integers
-std::pair<double, double> profile::get_speed()
-{
-    return std::pair<double, double>(0.0, 0.0);
-};
-
 //-------------Profile methods-------------
 
 void profile::compile_path_linear(std::vector<point> path)
@@ -175,7 +166,10 @@ void profile::follow_path()
 
     //Our current node should always be stick distance away from the target. If they are the same, then we are done
     if(current == target) {
-        this->at_destination = true;
+        this->at_destination = true; 
+    }
+
+    if (at_destination) {
         this->pointTurn();
         return;
     }
@@ -258,12 +252,21 @@ void profile::pointTurn()
 
     double percentage = abs(shortestDiff / 180);
 
+    if (percentage < .1) { //make sure we are operating at least 10% power
+        percentage = 0.1;
+    }
+
     if (leftright < 0)
         percentage = percentage * -1;
+
+    //If we are 2 degrees off from our target, call it a day
 
     angular_velocity = percentage;
     
 
+    if (shortestDiff <= 2) {
+        angular_velocity = 0.0;
+    }
 }
 
 //-------------Linear Motion--------------

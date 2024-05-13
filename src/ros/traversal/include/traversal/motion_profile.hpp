@@ -17,7 +17,7 @@ struct point
 
 	bool operator==(const point &b) const
 	{
-		return ((x > b.x - 0.5 && x < b.x + 0.5) && (y > b.y - 0.5 && y < b.y + 0.5));
+		return ((x > b.x - 0.1 && x < b.x + 0.1) && (y > b.y - 0.1 && y < b.y + 0.1));
 	}
 
 	point(double x, double y) : x(x), y(y){};
@@ -81,8 +81,7 @@ public:
 	double getAngularVelocity() {return angular_velocity;};
 	double getMaxVelocity() {return max_velocity;};
 	double getAtDestination() {return at_destination;};
-
-	std::pair<double, double> get_speed();
+	double getStick() {return distance;};
 
 private:
 	//Linear and Angular velocities are in percents. The calculation to get those to actual track velocities are in the ROS node

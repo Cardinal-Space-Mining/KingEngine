@@ -112,17 +112,27 @@ public:
 
     motionProfile->follow_path(); //storing the velocity multipliers  here
 
-    double max_velocity = motionProfile.getMaxVelocity();;
+    double max_velocity = motionProfile.getMaxVelocity();
     //set the velocities here
 
     double angular = motionProfile.getAngularVelocity();
             //---------------DIIFF CONST---------------
-    double diffConst = 80;
+    // double diffConst = 80;
 
-    double v1 = motionProfile.getMaxVelocity() - (angular * diffConst);
-    double v2 = motionProfile.getMaxVelocity() + (angular * diffConst);
+    // double v1 = motionProfile.getMaxVelocity() - (angular * diffConst);
+    // double v2 = motionProfile.getMaxVelocity() + (angular * diffConst);
 
-    if (-.3 < angular && angular < 0.3 && !motionProfile.getAtDestination()) { //If we are within 30% (54 degrees) of our target, then we should be doing a point turn, unless we are at our destination
+    double s = motionProfile.getStick();
+    double v = 0.25; //Meters per second velocity of the robot
+    double theta = abs(angular * 180.0); // go from the angular percentage to degrees. Shouldn't exceed 180, (range is from -180 to 180, but we only want positives here)
+    theta = theta * M_PI / 180; //Convert the theta from degrees to radians
+
+    double v1 = ( 2 * v * sin(theta) / s) * ((s / (2 * sin(x)))  +  .37465) * 167.78;
+
+    double v2 = ( 2 * v * sin(theta) / s) * ((s / (2 * sin(x)))  -  .37465) * 167.78;
+
+
+    if (-.3 < angular && angular < 0.3 && !motionProfile.getAtDestination()) { //If we are within 30% (54ish degrees) of our target, then we should not be doing a point turn, unless we are at our destination
 
       if (angular >= 0) {
             set_right_track_velo(v1);
@@ -131,7 +141,7 @@ public:
             set_right_track_velo(v2);
             set_left_track_velo(v1);
           }
-    } else { // set the velocities such that they are 
+    } else { // set the velocities such that they are doing a point turn. Should we just gun it?
         if (angular >=0) {
           set_right_track_velo((max_velocity * angular * -1));
           set_left_track_velo(max_velocity * angular);
@@ -141,15 +151,6 @@ public:
           set_left_track_velo(max_velocity * angular * -1);
         }
     }
-    else { // set the velocities such that they are 
-        if (angular >=0) {
-          set_right_track_velo((max_velocity * angular * -1));
-          set_left_track_velo(max_velocity * angular);
-        }
-        else {
-          set_right_track_velo(max_velocity * angular);
-          set_left_track_velo(max_velocity * angular * -1);
-        }
     
     
   }
