@@ -116,11 +116,18 @@ def generate_launch_description():
 
     # tf2
     # ros2 run tf2_ros static_transform_publisher "0" "0" "0" "0" "0" "0" "map" "scan"
-    tf2_node = Node(
+    tf2_map_node = Node(
         package = 'tf2_ros',
         executable = "static_transform_publisher",
         output = 'screen',
-        parameters = ["0.1", "0", "0", "0", "0.0", "0.0", "map", "scan"],
+        parameters = ["0.1", "0", "0", "0", "0.0", "0.0", "map", "world"],
+    )
+
+    tf2_odom_node = Node(
+        package = 'tf2_ros',
+        executable = "static_transform_publisher",
+        output = 'screen',
+        parameters = ["0.1", "0", "0", "0", "0.0", "0.0", "odom", "world"],
     )
 
 
@@ -143,7 +150,8 @@ def generate_launch_description():
         perception_launch,
         path_plan_launch,
         king_engine_node,
-        tf2_node,
-        # traversal_node,
+        tf2_map_node,
+        tf2_odom_node,
+        traversal_node,
         # video_publisher_node
     ])

@@ -246,7 +246,9 @@ protected:
 	rclcpp::Client<custom_types::srv::StopMining>::SharedPtr stop_mining_service;
 	rclcpp::Client<custom_types::srv::StartOffload>::SharedPtr start_offload_service;
 
-	std::vector<ObjectiveNode> objectives{};
+	std::tuple<double, double, double, OpMode> test = std::make_tuple(50.0, 50.0, 0.0, (OpMode) 1);
+
+	std::vector<ObjectiveNode> objectives{ test };
 	size_t objective_idx{ 0 };
 
 	double
