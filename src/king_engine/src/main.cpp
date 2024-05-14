@@ -49,12 +49,17 @@ const BoundingBox UCFB_CON_ZONE(5.54,4.57,8.14,2.57);
 const BoundingBox UCFB_LBERM_ZONE(6.09,4.02,7.59,3.12);
 const BoundingBox UCFB_SBERM_ZONE(6.19,3.92,7.49,3.22);
 
+// TODO set x and y to actual coordinates
+const double berm_x = 3.74;
+const double berm_y = 0.65;
 const BoundingBox KSC_ARENA_ZONE(0,5,6.88,0);
 const BoundingBox KSC_OBS_ZONE(0,5,3.88,0);
 const BoundingBox KSC_EXC_ZONE(3.88,5,6.88,0);
 const BoundingBox KSC_CON_ZONE(3.88,2,6.88,0);
-const BoundingBox KSC_LBERM_ZONE(4.38,1.1,6.58,0.2);
-const BoundingBox KSC_SBERM_ZONE(4.48,1.0,6.48,0.3);
+// const BoundingBox KSC_LBERM_ZONE(4.38,1.1,6.58,0.2);
+// const BoundingBox KSC_SBERM_ZONE(4.48,1.0,6.48,0.3);
+const BoundingBox KSC_LBERM_ZONE(berm_x - 1.1, berm_y + 0.45, berm_x + 1.1, berm_y - 0.45);
+const BoundingBox KSC_SBERM_ZONE(berm_x - 1, berm_y + 0.35, berm_x + 1, berm_y - 0.35);
 
 
 class KingEngineNode : public rclcpp::Node
@@ -148,8 +153,8 @@ public:
 		// Mine to distance
 		this->objectives.emplace_back(ObjectiveNode{4.2,2.5,90,OpMode::MINING});
 		// Move to berm
-		this->objectives.emplace_back(ObjectiveNode{3.74,0.65,90,OpMode::OFFLOAD});
-
+		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::OFFLOAD});
+		this->objectives.emplace_back(ObjectiveNode{0,0,90,OpMode::FINISHED});
 		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL) {
 			this->publish_destination();
 		}
@@ -204,7 +209,6 @@ public:
 				case OpMode::FINISHED: {
 					// send command to disable robot? (or do an emote/hit the griddy)?
 					// falls through to return
-					RCLCPP_INFO(this->get_logger(),"Automation Completed.");
 					return;
 				}
 				default: {
