@@ -22,6 +22,10 @@ struct point
 
 	point(double x, double y) : x(x), y(y){};
 
+	bool close(const point &b, double epsilon) {
+		return ((x > b.x - epsilon && x < b.x + epsilon) && (y > b.y - epsilon && y < b.y + epsilon));
+	};
+
 	point() = default;
 };
 

@@ -154,7 +154,7 @@ void profile::follow_path()
 
     // compare the current point to the target point
     // If the front of our path vector is also the end, then we don't want to do all this stuff because the last point is our final target
-    if (curnode.get_end() == target && m_path.size() > 1)
+    if (curnode.get_end().close(target, 0.1) && m_path.size() > 1)
     {
         // Erase the first path from m_path
         m_path.erase(m_path.begin());
@@ -165,7 +165,7 @@ void profile::follow_path()
     }
 
     //Our current node should always be stick distance away from the target. If they are the same, then we are done
-    if(current == target) {
+    if(current.close(target, 0.1)) {
         this->at_destination = true; 
     }
 
@@ -178,12 +178,12 @@ void profile::follow_path()
     // if the closest point is the target
     setTargetHeading(target);
 
-    double headings[2] = {(tar_angle - 360 - cur_angle), (tar_angle + 360 - cur_angle)};
+    const std::array<double, 2> headings = {(tar_angle - 360 - cur_angle), (tar_angle + 360 - cur_angle)};
 
     double shortestDiff = abs(tar_angle - cur_angle);
     double leftright = sin(tar_angle - cur_angle);
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < headings.size(); i++)
     {
         double t = abs(headings[i]);
         if (t < shortestDiff) {
@@ -235,13 +235,13 @@ void profile::setTargetAngle(double target)
 
 void profile::pointTurn()
 {
-    double headings[2] = {(final_angle - 360 - cur_angle), (final_angle + 360 - cur_angle)};
+    const std::array<double, 2> headings = {(final_angle - 360 - cur_angle), (final_angle + 360 - cur_angle)}; //std array, use safe code
 
     double shortestDiff = abs(final_angle - cur_angle);
     double leftright = sin(tar_angle - cur_angle);
 
 
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < headings.size(); i++)
     {
         double t = abs(headings[i]);
         if (t < shortestDiff) {
@@ -304,7 +304,7 @@ point motion_node::get_target_from_distance(point current, double distance)
     point c = {0, 0};
 
     // Overloaded operator.
-    if (current == closest)
+    if (current.close(closest, 0.1))
     {
         c = findCarrotSamePoint(a, b, closest, distance, true);
     }
