@@ -113,40 +113,48 @@ public:
     motionProfile->setCurrent(x_meters, y_meters);
     motionProfile->setCurrentHeading(yaw_degrees);
 
-    motionProfile->follow_path();
+    motionProfile->follow_path(); //storing the velocity multipliers  here
 
-    double max_velocity = 750;
+    double max_velocity = motionProfile->getMaxVelocity();
     //set the velocities here
 
-    double linear = motionProfile->getLinearVelocity();
     double angular = motionProfile->getAngularVelocity();
+            //---------------DIIFF CONST---------------
+    // double diffConst = 80;
 
-    double leftVelocity = 0.0;
-    double rightVelocity = 0.0;
+    // double v1 = motionProfile.getMaxVelocity() - (angular * diffConst);
+    // double v2 = motionProfile.getMaxVelocity() + (angular * diffConst);
 
-    // double temp_velocity = max_velocity * linear;  // unused
-    if (linear == 0.0) { //If our linear velocity is 0, then do a pure point turn
-      if (angular < 0) { //counterclockwise 
-      //   leftVelocity = max_velocity * angular;
-      //   rightVelocity = max_velocity * angular * -1; //Angular is negative, so we want right to be positive
-      // } else { //clockwise
-        leftVelocity = max_velocity * angular;
-        rightVelocity = max_velocity * angular * -1; //Anguilar is positive, we want the right to be negative
-      }
-    } else { //Or else we are doing a 'regular' turn with some forward throttle. Angular velocity determines which side gets more push
-    if (angular < 0) {
-      leftVelocity = max_velocity * linear * abs(1 - angular);
-      rightVelocity = max_velocity * linear * abs(angular);
-    } else {
-      leftVelocity = max_velocity * linear * angular;
-      rightVelocity = max_velocity * linear * (1 - angular);
+    double s = motionProfile->getStick();
+    double v = 0.25; //Meters per second velocity of the robot
+    double theta = abs(angular * 180.0); // go from the angular percentage to degrees. Shouldn't exceed 180, (range is from -180 to 180, but we only want positives here)
+    theta = theta * M_PI / 180; //Convert the theta from degrees to radians
+
+    double v1 = ( 2 * v * sin(theta) / s) * ((s / (2 * sin(theta)))  +  .37465) * 167.78;
+
+    double v2 = ( 2 * v * sin(theta) / s) * ((s / (2 * sin(theta)))  -  .37465) * 167.78;
+
+
+    if (-.3 < angular && angular < 0.3 && !motionProfile->getAtDestination()) { //If we are within 30% (54ish degrees) of our target, then we should not be doing a point turn, unless we are at our destination
+
+      if (angular >= 0) {
+            set_right_track_velo(v1);
+            set_left_track_velo(v2);
+          } else {
+            set_right_track_velo(v2);
+            set_left_track_velo(v1);
+          }
+    } else { // set the velocities such that they are doing a point turn. Should we just gun it?
+        if (angular >=0) {
+          set_right_track_velo((max_velocity * angular * -1));
+          set_left_track_velo(max_velocity * angular);
+        }
+        else {
+          set_right_track_velo(max_velocity * angular);
+          set_left_track_velo(max_velocity * angular * -1);
+        }
     }
-     
-    }
-
-    set_right_track_velo(rightVelocity);
-
-    set_left_track_velo(leftVelocity);
+    
     
   }
 
