@@ -120,7 +120,7 @@ def generate_launch_description():
         package = 'tf2_ros',
         executable = "static_transform_publisher",
         output = 'screen',
-        parameters = ["0.1", "0", "0", "0", "0.0", "0.0", "world", "base_link"],
+        parameters = ["0.1", "0", "0", "0", "0.0", "0.0", "map", "scan"],
     )
 
 
