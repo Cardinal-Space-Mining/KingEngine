@@ -8,6 +8,7 @@
 #include "nav_msgs/msg/path.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
+#include "std_msgs/msg/float32.hpp"
 
 /** This class represents the path plannig ROS node (duh) */
 class PathPlanNode : public rclcpp::Node
@@ -61,11 +62,12 @@ protected:
 	const rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr location_sub;
     const rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr avoidance_zone_flag_sub;
 
-	const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub;
-	const rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr weight_map_pub;
+    const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub;
+    const rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr weight_map_pub;
+    const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr raycast_pub;
 
 	const float robot_width;
-	const int turn_cost, min_weight;
+    const int turn_cost, min_weight;
 	const float avoidance_barrier_x, avoidance_barrier_y;
 	const int avoidance_barrier_thickness;
 

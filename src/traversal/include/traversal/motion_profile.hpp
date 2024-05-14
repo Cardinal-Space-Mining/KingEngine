@@ -17,7 +17,7 @@ struct point
 
 	bool operator==(const point &b) const
 	{
-		return ((x > b.x - 0.01 && x < b.x + 0.01) && (y > b.y - 0.01 && y < b.y + 0.01));
+		return ((x > b.x - 0.1 && x < b.x + 0.1) && (y > b.y - 0.1 && y < b.y + 0.1));
 	}
 
 	point(double x, double y) : x(x), y(y){};
@@ -68,7 +68,7 @@ public:
 	// 	m_path = std::vector<motion_node>();
 	// };
 
-	profile() : linear_velocity(0), angular_velocity(0), cur_angle(0), tar_angle(0), distance(1), at_destination(false), m_path(std::vector<motion_node>()){}; //path(std::vector<point>()),
+	profile() : linear_velocity(0), max_velocity(150), angular_velocity(0), cur_angle(0), tar_angle(0), distance(1), at_destination(false), m_path(std::vector<motion_node>()){}; //path(std::vector<point>()),
 
 	void follow_path();
 	void setCurrent(double new_x, double new_y) { current = point(new_x, new_y); }
@@ -79,12 +79,14 @@ public:
 	void compile_path_linear(std::vector<point> path);
 	double getLinearVelocity() {return linear_velocity;};
 	double getAngularVelocity() {return angular_velocity;};
-
-	std::pair<double, double> get_speed();
+	double getMaxVelocity() {return max_velocity;};
+	double getAtDestination() {return at_destination;};
+	double getStick() {return distance;};
 
 private:
 	//Linear and Angular velocities are in percents. The calculation to get those to actual track velocities are in the ROS node
 	double linear_velocity; //How fast straight are we going
+	double max_velocity;
 	double angular_velocity; //How fast left/right are we going
 	double cur_angle; //Current heading
 	double tar_angle; //Target heading
