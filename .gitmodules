@@ -1,12 +1,12 @@
-[submodule "src/ros/rio_interface/PiSerialControl"]
-	path = src/ros/rio_interface/PiSerialControl
+[submodule "src/direct_lidar_inertial_odometry"]
+	path = src/direct_lidar_inertial_odometry
+	url = https://github.com/Cardinal-Space-Mining/direct_lidar_inertial_odometry.git
+	branch = filtered_points
+[submodule "src/rio_interface/PiSerialControl"]
+	path = src/rio_interface/PiSerialControl
 	url = https://github.com/Cardinal-Space-Mining/PiSerialControl.git
-[submodule "src/ros/Sick-Perception"]
-	path = src/ros/Sick-Perception
-	url = https://github.com/Cardinal-Space-Mining/Sick-Perception
-[submodule "src/ros/sick_scan_xd"]
-	path = src/ros/sick_scan_xd
-	url = https://github.com/sickag/sick_scan_xd
-[submodule "src/ros/direct_lidar_inertial_odometry"]
-	path = src/ros/direct_lidar_inertial_odometry
-	url = https://github.com/Cardinal-Space-Mining/direct_lidar_inertial_odometry
+	branch = main
+[submodule "src/Sick-Perception"]
+	path = src/Sick-Perception
+	url = https://github.com/Cardinal-Space-Mining/Sick-Perception.git
+	branch = SickPerceptionMinimal
