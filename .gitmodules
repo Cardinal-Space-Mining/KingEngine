@@ -4,7 +4,6 @@
 [submodule "src/ros/Sick-Perception"]
 	path = src/ros/Sick-Perception
 	url = https://github.com/Cardinal-Space-Mining/Sick-Perception
-	branch = SickPerceptionMinimal
 [submodule "src/ros/sick_scan_xd"]
 	path = src/ros/sick_scan_xd
 	url = https://github.com/sickag/sick_scan_xd
