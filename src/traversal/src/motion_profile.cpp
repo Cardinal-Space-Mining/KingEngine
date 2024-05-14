@@ -186,9 +186,10 @@ void profile::follow_path()
     for (int i = 0; i < 2; i++)
     {
         double t = abs(headings[i]);
-        if (t < shortestDiff)
+        if (t < shortestDiff) {
             shortestDiff = t;
             leftright = sin(headings[i]);
+        }
     }
 
     // compare shortest target angle to the current angle, then adjust the linear & angular velocity based on the difference
