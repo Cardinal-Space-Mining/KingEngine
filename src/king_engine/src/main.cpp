@@ -55,18 +55,23 @@ class BoundingBox {
 const BoundingBox UCFT_ARENA_ZONE(0,8.14,4.57,0);
 const BoundingBox UCFT_OBS_ZONE(0,4.07,4.57,0);
 const BoundingBox UCFT_EXC_ZONE(0,8.14,4.57,4.07);
-const BoundingBox UCFT_CON_ZONE(2.57,8.14,4.97,5.54);
+const BoundingBox UCFT_CON_ZONE(2.57,8.14,4.57,5.54);
 const BoundingBox UCFT_LBERM_ZONE(3.12,7.59,4.02,6.09);
-const BoundingBox UCFT_SBERM_ZONE(3.32,7.39,3.82,6.92);
-const BoundingBox UCFT_MINE_LIMIT_LINE(0,0,0,0);
+const BoundingBox UCFT_SBERM_ZONE(3.22,7.49,3.92,6.19);
 
 const BoundingBox UCFB_ARENA_ZONE(0,4.57,8.14,0);
 const BoundingBox UCFB_OBS_ZONE(0,4.57,4.07,0);
 const BoundingBox UCFB_EXC_ZONE(4.07,4.57,8.14,0);
 const BoundingBox UCFB_CON_ZONE(5.54,4.57,8.14,2.57);
 const BoundingBox UCFB_LBERM_ZONE(6.09,4.02,7.59,3.12);
-const BoundingBox UCFB_SBERM_ZONE(6.29,3.82,7.39,3.32);
-const BoundingBox UCFB_MINE_LIMIT_LINE(0,0,0,0);
+const BoundingBox UCFB_SBERM_ZONE(6.19,3.92,7.49,3.22);
+
+const BoundingBox KSC_ARENA_ZONE(0,5,6.88,0);
+const BoundingBox KSC_OBS_ZONE(0,5,3.88,0);
+const BoundingBox KSC_EXC_ZONE(3.88,5,6.88,0);
+const BoundingBox KSC_CON_ZONE(3.88,2,6.88,0);
+const BoundingBox KSC_LBERM_ZONE(4.38,1.1,6.58,0.2);
+const BoundingBox KSC_SBERM_ZONE(4.48,1.0,6.48,0.3);
 
 
 class KingEngineNode : public rclcpp::Node
