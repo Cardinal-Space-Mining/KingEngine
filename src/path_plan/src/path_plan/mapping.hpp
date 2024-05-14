@@ -176,6 +176,82 @@ public:
 		return this->map.size();
 	}
 
+    template<typename WeightT = uint8_t, bool X_Major = false>
+    double distance_to_obstacle(
+            const WeightT *weights,
+            mapsize_t wsize_x, mapsize_t wsize_y,
+            double worigin_x,  double worigin_y,
+            double cell_resolution,
+            double pose_x, double pose_y,
+            double pose_theta,
+            WeightT weight_threshold)
+    {
+        const Eigen::Vector2d
+            origin{worigin_x, worigin_y};
+        const This_T::Vec2m
+            wsize{wsize_x, wsize_y},
+            pos = GridUtils::gridAlign<mapsize_t, double>(pose_x, pose_y, origin, cell_resolution);
+
+        return this->distance_to_obstacle<WeightT, X_Major, mapsize_t>(
+                weights,
+                wsize,
+                pos,
+                pose_theta,
+                weight_threshold) * cell_resolution;
+    }
+
+    template<typename WeightT, bool X_Major = false, typename IntT = mapsize_t>
+    double distance_to_obstacle(
+        const WeightT *weights,
+        const Eigen::Vector2<IntT> &wsize,
+        const Eigen::Vector2<IntT> &pos,
+        const double theta,
+        const WeightT weight_threshold)
+    {
+        const int64_t
+                _pos_idx = GridUtils::gridIdx<X_Major, IntT>(pos, wsize);
+
+//        using vec2 = Eigen::Vector2d<WeightT>;
+//        using Vec2m = Eigen::Vector2<mapsize_t>; // represents a location on the map
+
+        static const Vec2m
+                _zero = Vec2m::Zero();
+
+        if (!GridUtils::inRange<IntT>(pos, _zero, wsize)) {
+            return false;
+        }
+
+        Vec2m ray_offset(0, 0);
+        const Vec2m _loc = GridUtils::gridLoc<X_Major, IntT>(_pos_idx, wsize);
+        Vec2m ray_point = _loc;
+
+        const double sign_dx = cos(theta) < 0 ? -1.0 : 1.0;
+        const double sign_dy = sin(theta) < 0 ? -1.0 : 1.0;
+        const double delta_err = abs(tan(theta));
+        double err = 0.0;
+
+        while (true) {
+            int64_t ray_idx = GridUtils::gridIdx<X_Major, IntT>(ray_point, wsize);
+
+            if (weights[ray_idx] > weight_threshold ||
+                !GridUtils::inRange<IntT>(ray_point, _zero, wsize)) {
+                break;
+            }
+
+            err += delta_err;
+            if (err >= 0.5) {
+                // Increment y based on the slope direction
+                ray_point(1) += sign_dy;
+                err -= 1.0;
+            } else {
+                ray_point(0) += sign_dx;
+            }
+        }
+
+        return (ray_point - pos).norm();
+    }
+
+
 	template <typename WeightT = uint8_t, bool X_Major = false>
 	This_T::Path navigate(
 		const WeightT *weights,
