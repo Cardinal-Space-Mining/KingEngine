@@ -17,7 +17,6 @@
 #include "custom_types/srv/stop_mining.hpp"
 #include "custom_types/srv/start_offload.hpp"
 
-
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
@@ -27,29 +26,13 @@ class BoundingBox {
 	public:
 	// if corners, mining zone, else berm zone
 	BoundingBox(double _x1, double _y1, double _x2, double _y2) {
-		// if (corners) {
     tlx = _x1;
     tly = _y1;
     brx = _x2;
     bry = _y2;
-		// } else {
-    // tlx = _x1 - _x2/2.0;
-    // tly = _y1 - _x2/2.0;
-    // brx = _x1 + _y2/2.0;
-    // bry = _y1 + _x2/2.0;
-		// }
 	}
 	double tlx, tly, brx, bry;
 };
-// tlxtlybry byryx
-// bool mining = true;
-
-// BoundingBox UCF_MINING_ZONE(tlx, tly, brx, bry, true);
-// BoundingBox UCF_BERM_ZONE(cntrx, cntry, width, height, false);
-// const BoundingBox KSC_MINING_ZONE(3.88, 3.5, 6.88, 3.5, true);
-// TODO update actual x and y coord of berm zone
-// const BoundingBox KSC_BERM_ZONE(5.8, 1.2, 2, 0.7, false);
-
 
 // (tlx, tly, brx, bry)
 const BoundingBox UCFT_ARENA_ZONE(0,8.14,4.57,0);
@@ -120,7 +103,7 @@ private:
 		assert(mining.size() == offload.size());
 		for (size_t i = 0; i < mining.size(); i++) {
 			this->objectives.emplace_back(mining[i]);
-			this->objectives.emplace_back(offload[i]);
+			this->objectives.emplace_back(offloa;d[i]);
 		}
 	}
 
@@ -151,11 +134,21 @@ public:
 		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("");
 		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("");
 
-    // TODO if this is to find the total area there is a variable for that now.
+    	// TODO if this is to find the total area there is a variable for that now.
 		// this->combine_keypoints(
 		// 	get_objectives_from_bounding_box(UCFT_EXC_ZONE, 5, 3, 90, OpMode::MINING),
 		// 	get_objectives_from_bounding_box(UCFT_LBERM_ZONE, 5, 3, 90, OpMode::OFFLOAD)
 		// );
+
+		// Move to coord in con zone
+		this->objectives.emplace_back(ObjectiveNode{4.2,1.6,90,OpMode::TRAVERSAL});
+		// TODO what happens when there is obs in way
+		// Move to exc zone border
+		this->objectives.emplace_back(ObjectiveNode{4.2,2,90,OpMode::TRAVERSAL});
+		// Mine to distance
+		this->objectives.emplace_back(ObjectiveNode{4.2,2.5,90,OpMode::MINING});
+		// Move to berm
+		this->objectives.emplace_back(ObjectiveNode{3.74,0.65,90,OpMode::OFFLOAD});
 
 		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL) {
 			this->publish_destination();
@@ -211,6 +204,7 @@ public:
 				case OpMode::FINISHED: {
 					// send command to disable robot? (or do an emote/hit the griddy)?
 					// falls through to return
+					RCLCPP_INFO(this->get_logger(),"Automation Completed.");
 					return;
 				}
 				default: {
