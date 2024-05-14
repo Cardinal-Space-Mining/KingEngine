@@ -244,10 +244,10 @@ void profile::pointTurn()
     for (int i = 0; i < 2; i++)
     {
         double t = abs(headings[i]);
-        if (t < shortestDiff)
+        if (t < shortestDiff) {
             shortestDiff = t;
             leftright = sin(headings[i]);
-
+        }
     }
 
 
