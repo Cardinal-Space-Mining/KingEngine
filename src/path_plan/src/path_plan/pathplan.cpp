@@ -76,7 +76,8 @@ PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   avoidance_zone_flag_sub(this->create_subscription<std_msgs::msg::Bool>("avoid_zone", 1, std::bind(&PathPlanNode::avoid_zone_flag_change_cb, this, std::placeholders::_1))),
 							   path_pub(this->create_publisher<nav_msgs::msg::Path>("/pathplan/nav_path", 1)),
 							   weight_map_pub(this->create_publisher<nav_msgs::msg::OccupancyGrid>("/pathplan/nav_map", 1)),
-							   raycast_pub(this->create_publisher<nav_msgs::msg::Path>("/ray_path", 1)),
+							//    raycast_pub(this->create_publisher<nav_msgs::msg::Path>("/ray_path", 1)),
+							   raycast_service(this->create_service<custom_types::srv::GetDistToObs>("get_dist_to_obs", std::bind(&PathPlanNode::export_raycast, this, std::placeholders::_1, std::placeholders::_2))),
                                robot_width(this->get_parameter(ROBOT_WIDTH_PARAM_NAME).as_double()),
 							   turn_cost(this->get_parameter(TURN_COST_PARAM_NAME).as_int()),
 							   min_weight(this->get_parameter(MIN_WEIGHT_PARAM_NAME).as_int()),
@@ -84,8 +85,8 @@ PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   avoidance_barrier_y(this->get_parameter(AVOID_ZONE_Y_PARAM_NAME).as_double()),
 							   avoidance_barrier_thickness(this->get_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME).as_int()),
 							   output_frame_id(this->get_parameter(OUTPUT_FRAME_PARAM_NAME).as_string()),
-							   periodic_publisher(this->create_wall_timer(this->get_parameter(UPDATE_TIME_PARAM_NAME).as_double() * 1000ms, std::bind(&PathPlanNode::export_data, this))),
-							   raycast_service(this->create_service<custom_types::srv::GetDistToObs>("get dist to obs", std::bind(&PathPlanNode::export_raycast, this)))
+							   periodic_publisher(this->create_wall_timer(this->get_parameter(UPDATE_TIME_PARAM_NAME).as_double() * 1000ms, std::bind(&PathPlanNode::export_data, this)))
+							   
 
 {
 	RCLCPP_INFO(this->get_logger(), "PathPlan Node Initialization!");
@@ -245,7 +246,7 @@ void PathPlanNode::export_data()
 }
 
 
-void PathPlanNode::export_raycast(std::shared_ptr<custom_types::srv::GetDistToObs> request, std::shared_ptr<custom_types::srv::GetDistToObs> response){
+void PathPlanNode::export_raycast(std::shared_ptr<custom_types::srv::GetDistToObs::Request>, std::shared_ptr<custom_types::srv::GetDistToObs::Response> response){
             geometry_msgs::msg::Quaternion q = current_pose.orientation;
 
             {

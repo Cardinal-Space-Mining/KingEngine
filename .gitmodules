@@ -9,4 +9,4 @@
 [submodule "src/Sick-Perception"]
 	path = src/Sick-Perception
 	url = https://github.com/Cardinal-Space-Mining/Sick-Perception.git
-	branch = perception-v3-ros
+	branch = SickPerceptionMinimal

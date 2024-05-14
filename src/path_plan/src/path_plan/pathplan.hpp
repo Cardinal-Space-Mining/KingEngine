@@ -30,6 +30,7 @@ protected:
 
 	/** Rerun navigation through the currently stored map and export the resulting path */
 	void export_data();
+	void export_raycast(std::shared_ptr<custom_types::srv::GetDistToObs::Request> request, std::shared_ptr<custom_types::srv::GetDistToObs::Response> response);
 
 	bool config_node();
 

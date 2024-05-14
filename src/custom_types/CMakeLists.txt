@@ -18,6 +18,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/StartMining.srv"
   "srv/StartOffload.srv"
   "srv/StopMining.srv"
+  "srv/GetDistToObs.srv"
 )
 
 # uncomment the following section in order to fill in
