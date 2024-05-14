@@ -76,12 +76,13 @@ PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   avoidance_zone_flag_sub(this->create_subscription<std_msgs::msg::Bool>("avoid_zone", 1, std::bind(&PathPlanNode::avoid_zone_flag_change_cb, this, std::placeholders::_1))),
 							   path_pub(this->create_publisher<nav_msgs::msg::Path>("/pathplan/nav_path", 1)),
 							   weight_map_pub(this->create_publisher<nav_msgs::msg::OccupancyGrid>("/pathplan/nav_map", 1)),
-							   robot_width(this->get_parameter(ROBOT_WIDTH_PARAM_NAME).as_double()),
+							   raycast_pub(this->create_publisher<nav_msgs::msg::Path>("/ray_path", 1)),
+                               robot_width(this->get_parameter(ROBOT_WIDTH_PARAM_NAME).as_double()),
 							   turn_cost(this->get_parameter(TURN_COST_PARAM_NAME).as_int()),
 							   min_weight(this->get_parameter(MIN_WEIGHT_PARAM_NAME).as_int()),
 							   avoidance_barrier_x(this->get_parameter(AVOID_ZONE_X_PARAM_NAME).as_double()),
 							   avoidance_barrier_y(this->get_parameter(AVOID_ZONE_Y_PARAM_NAME).as_double()),
-							   avoidance_barrier_thickness(this->get_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME).as_double()),
+							   avoidance_barrier_thickness(this->get_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME).as_int()),
 							   output_frame_id(this->get_parameter(OUTPUT_FRAME_PARAM_NAME).as_string()),
 							   periodic_publisher(this->create_wall_timer(this->get_parameter(UPDATE_TIME_PARAM_NAME).as_double() * 1000ms, std::bind(&PathPlanNode::export_data, this)))
 
@@ -182,7 +183,6 @@ void PathPlanNode::avoid_zone_flag_change_cb(const std_msgs::msg::Bool &flag) {
 
 void PathPlanNode::export_data()
 {
-
 	if (new_dst || new_map_data)
 	{
 		nav_msgs::msg::Path ros_path{};
@@ -229,12 +229,68 @@ void PathPlanNode::export_data()
 		}
 
 		this->path_pub->publish(ros_path);
+
+
+        {
+            geometry_msgs::msg::Quaternion q = current_pose.orientation;
+
+            {
+                double qq = sqrt(q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w);
+                q.x /= qq;
+                q.y /= qq;
+                q.z /= qq;
+                q.w /= qq;
+            }
+
+            const double siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+            const double cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+            const double yaw = std::atan2(siny_cosp, cosy_cosp);
+
+            double distance_to_obstacle = this->nav_map.distance_to_obstacle<uint8_t, false>(
+                    reinterpret_cast<uint8_t *>(this->weights.data.data()),
+                    this->weights.info.width,
+                    this->weights.info.height,
+                    this->weights.info.origin.position.x,
+                    this->weights.info.origin.position.y,
+                    this->weights.info.resolution,
+                    this->current_pose.position.x,
+                    this->current_pose.position.y,
+                    yaw,
+                    this->min_weight);
+            RCLCPP_INFO(this->get_logger(), "Yaw: %f\nDistance to obstacle: %f", yaw, distance_to_obstacle);
+
+            nav_msgs::msg::Path ray_path{};
+
+            ray_path.poses.resize(2);
+            ray_path.header.stamp = this->get_clock()->now();
+            ray_path.header.frame_id = this->output_frame_id;
+
+            ray_path.poses[0].pose = current_pose;
+            ray_path.poses[0].header.stamp = ray_path.header.stamp;
+            ray_path.poses[0].header.frame_id = this->output_frame_id;
+
+            ray_path.poses[1].pose.position.x = current_pose.position.x + distance_to_obstacle*cos(yaw);
+            ray_path.poses[1].pose.position.y = current_pose.position.y + distance_to_obstacle*sin(yaw);
+            ray_path.poses[1].pose.position.z = current_pose.position.z;
+            ray_path.poses[1].pose.orientation.w = 1.0;
+            ray_path.poses[1].pose.orientation.x = 0.0;
+            ray_path.poses[1].pose.orientation.y = 0.0;
+            ray_path.poses[1].pose.orientation.z = 0.0;
+            ray_path.poses[1].header.stamp = ray_path.header.stamp;
+            ray_path.poses[1].header.frame_id = this->output_frame_id;
+
+            this->raycast_pub->publish(ray_path);
+        }
+
 	}
 
 	if (new_map_data)
 	{
 		this->weight_map_pub->publish(this->weights);
 	}
+
+    new_map_data = false;
+    new_dst = false;
 }
 
 bool PathPlanNode::config_node()
