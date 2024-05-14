@@ -28,8 +28,8 @@ public:
   TraversalNode()
       : Node("traversal"),
         motionProfile(std::make_unique<profile>()),
-        path_sub(this->create_subscription<nav_msgs::msg::Path>("path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
-        location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("location", 10, std::bind(&TraversalNode::location_change_cb, this, _1))),
+        path_sub(this->create_subscription<nav_msgs::msg::Path>("/pathplan/pathplan_path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
+        location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 10, std::bind(&TraversalNode::location_change_cb, this, _1))),
         tracks(this->create_client<custom_types::srv::SetTrackVelocity>("set_track_velocity"))
   {
     while (!tracks->wait_for_service(250ms))
