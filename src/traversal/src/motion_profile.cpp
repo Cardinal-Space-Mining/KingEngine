@@ -183,7 +183,7 @@ void profile::follow_path()
     double shortestDiff = abs(tar_angle - cur_angle);
     double leftright = sin(tar_angle - cur_angle);
 
-    for (int i = 0; i < headings.size(); i++)
+    for (size_t i = 0; i < headings.size(); i++)
     {
         double t = abs(headings[i]);
         if (t < shortestDiff) {
@@ -241,7 +241,7 @@ void profile::pointTurn()
     double leftright = sin(tar_angle - cur_angle);
 
 
-    for (int i = 0; i < headings.size(); i++)
+    for (size_t i = 0; i < headings.size(); i++)
     {
         double t = abs(headings[i]);
         if (t < shortestDiff) {
