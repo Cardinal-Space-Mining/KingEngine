@@ -145,6 +145,7 @@ public:
             set_left_track_velo(v1);
           }
     } else { // set the velocities such that they are doing a point turn. Should we just gun it?
+    //Different than a point turn at the end of a path. Don't need to worry about small angular percentages
         if (angular >=0) {
           set_right_track_velo((max_velocity * angular * -1));
           set_left_track_velo(max_velocity * angular);
