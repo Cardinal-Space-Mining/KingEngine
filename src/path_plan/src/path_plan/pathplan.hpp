@@ -9,6 +9,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "custom_types/srv/get_dist_to_obs.hpp"
 
 /** This class represents the path plannig ROS node (duh) */
 class PathPlanNode : public rclcpp::Node
@@ -65,6 +66,8 @@ protected:
     const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub;
     const rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr weight_map_pub;
     const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr raycast_pub;
+
+	const rclcpp::Service<custom_types::srv::GetDistToObs>::SharedPtr raycast_service;
 
 	const float robot_width;
     const int turn_cost, min_weight;

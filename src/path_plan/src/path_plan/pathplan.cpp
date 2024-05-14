@@ -84,7 +84,8 @@ PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   avoidance_barrier_y(this->get_parameter(AVOID_ZONE_Y_PARAM_NAME).as_double()),
 							   avoidance_barrier_thickness(this->get_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME).as_int()),
 							   output_frame_id(this->get_parameter(OUTPUT_FRAME_PARAM_NAME).as_string()),
-							   periodic_publisher(this->create_wall_timer(this->get_parameter(UPDATE_TIME_PARAM_NAME).as_double() * 1000ms, std::bind(&PathPlanNode::export_data, this)))
+							   periodic_publisher(this->create_wall_timer(this->get_parameter(UPDATE_TIME_PARAM_NAME).as_double() * 1000ms, std::bind(&PathPlanNode::export_data, this))),
+							   raycast_service(this->create_service<custom_types::srv::GetDistToObs>("get dist to obs", std::bind(&PathPlanNode::export_raycast, this)))
 
 {
 	RCLCPP_INFO(this->get_logger(), "PathPlan Node Initialization!");
@@ -231,7 +232,20 @@ void PathPlanNode::export_data()
 		this->path_pub->publish(ros_path);
 
 
-        {
+        
+	}
+
+	if (new_map_data)
+	{
+		this->weight_map_pub->publish(this->weights);
+	}
+
+    new_map_data = false;
+    new_dst = false;
+}
+
+
+void PathPlanNode::export_raycast(std::shared_ptr<custom_types::srv::GetDistToObs> request, std::shared_ptr<custom_types::srv::GetDistToObs> response){
             geometry_msgs::msg::Quaternion q = current_pose.orientation;
 
             {
@@ -259,38 +273,7 @@ void PathPlanNode::export_data()
                     this->min_weight);
             RCLCPP_INFO(this->get_logger(), "Yaw: %f\nDistance to obstacle: %f", yaw, distance_to_obstacle);
 
-            nav_msgs::msg::Path ray_path{};
-
-            ray_path.poses.resize(2);
-            ray_path.header.stamp = this->get_clock()->now();
-            ray_path.header.frame_id = this->output_frame_id;
-
-            ray_path.poses[0].pose = current_pose;
-            ray_path.poses[0].header.stamp = ray_path.header.stamp;
-            ray_path.poses[0].header.frame_id = this->output_frame_id;
-
-            ray_path.poses[1].pose.position.x = current_pose.position.x + distance_to_obstacle*cos(yaw);
-            ray_path.poses[1].pose.position.y = current_pose.position.y + distance_to_obstacle*sin(yaw);
-            ray_path.poses[1].pose.position.z = current_pose.position.z;
-            ray_path.poses[1].pose.orientation.w = 1.0;
-            ray_path.poses[1].pose.orientation.x = 0.0;
-            ray_path.poses[1].pose.orientation.y = 0.0;
-            ray_path.poses[1].pose.orientation.z = 0.0;
-            ray_path.poses[1].header.stamp = ray_path.header.stamp;
-            ray_path.poses[1].header.frame_id = this->output_frame_id;
-
-            this->raycast_pub->publish(ray_path);
-        }
-
-	}
-
-	if (new_map_data)
-	{
-		this->weight_map_pub->publish(this->weights);
-	}
-
-    new_map_data = false;
-    new_dst = false;
+			response->return_value = distance_to_obstacle;
 }
 
 bool PathPlanNode::config_node()
