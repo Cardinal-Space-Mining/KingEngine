@@ -17,6 +17,7 @@
 #include "custom_types/srv/start_mining.hpp"
 #include "custom_types/srv/stop_mining.hpp"
 #include "custom_types/srv/start_offload.hpp"
+#include "custom_types/srv/get_dist_to_obs.hpp"
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
@@ -35,20 +36,6 @@ class BoundingBox {
 	double tlx, tly, brx, bry;
 };
 
-// const BoundingBox UCFT_ARENA_ZONE(0,8.14,4.57,0);
-// const BoundingBox UCFT_OBS_ZONE(0,4.07,4.57,0);
-// const BoundingBox UCFT_EXC_ZONE(0,8.14,4.57,4.07);
-// const BoundingBox UCFT_CON_ZONE(2.57,8.14,4.57,5.54);
-// const BoundingBox UCFT_LBERM_ZONE(3.12,7.59,4.02,6.09);
-// const BoundingBox UCFT_SBERM_ZONE(3.22,7.49,3.92,6.19);
-
-// const BoundingBox UCFB_ARENA_ZONE(0,4.57,8.14,0);
-// const BoundingBox UCFB_OBS_ZONE(0,4.57,4.07,0);
-// const BoundingBox UCFB_EXC_ZONE(4.07,4.57,8.14,0);
-// const BoundingBox UCFB_CON_ZONE(5.54,4.57,8.14,2.57);
-// const BoundingBox UCFB_LBERM_ZONE(6.09,4.02,7.59,3.12);
-// const BoundingBox UCFB_SBERM_ZONE(6.19,3.92,7.49,3.22);
-
 // TODO set x and y to actual coordinates
 const double berm_x = 5.38;
 const double berm_y = 0.6;
@@ -61,6 +48,9 @@ const BoundingBox KSC_CON_ZONE(3.88,2,6.88,0);
 // const BoundingBox KSC_SBERM_ZONE(4.48,1.0,6.48,0.3);
 const BoundingBox KSC_LBERM_ZONE(berm_x - 1.1, berm_y + 0.45, berm_x + 1.1, berm_y - 0.45);
 const BoundingBox KSC_SBERM_ZONE(berm_x - 1, berm_y + 0.35, berm_x + 1, berm_y - 0.35);
+
+const double MINING_TIME = 5.0;
+const double SAFE_MINING_DIST = 0.25;
 
 template <typename T>
 void ke_wait_for_service(T& client){
@@ -81,7 +71,8 @@ public:
 		FINISHED = 0,
 		TRAVERSAL = 1,
 		MINING = 2,
-		OFFLOAD = 3
+		OFFLOAD = 3,
+		SEARCH_FOR_GOLD = 4
 	};
 	using ObjectiveNode = std::tuple<double, double, double, OpMode>;	// x, y , theta, operation mode
 
@@ -95,33 +86,6 @@ private:
 			std::abs(pose.position.y - std::get<1>(target)) < trav_epsilon_m &&
 			std::abs(yaw - std::get<2>(target)) < heading_epsilon_deg
 		);
-	}
-	static bool is_mining_finished(const geometry_msgs::msg::Pose& pose, double x_min, double x_max, double y_min, double y_max) {
-		const geometry_msgs::msg::Point& pt = pose.position;
-		return (
-			(pt.x < x_min || pt.x > x_max) ||
-			(pt.y < y_min || pt.y > y_max)
-		);
-	}
-	
-	static std::vector<ObjectiveNode> get_objectives_from_bounding_box(BoundingBox bb, int x_divisions, int y_divisions, double theta, OpMode op) {
-		std::vector<ObjectiveNode> result{};
-		double dx = (bb.brx - bb.tlx) / (float)(x_divisions+1);
-		double dy = (bb.bry - bb.tly) / (float)(y_divisions+1);
-		for (double y = bb.tly - dy/2.0; y > bb.bry; y += dy) {
-			for (double x = bb.tlx + dx/2.0; x < bb.brx; x += dx) {
-				result.emplace_back(ObjectiveNode{x, y, theta, op});
-			}
-		}
-		return result;
-	}
-
-	void combine_keypoints(const std::vector<ObjectiveNode> &mining, const std::vector<ObjectiveNode> &offload) {
-		assert(mining.size() == offload.size());
-		for (size_t i = 0; i < mining.size(); i++) {
-			this->objectives.emplace_back(mining[i]);
-			this->objectives.emplace_back(offload[i]);
-		}
 	}
 
 	void publish_destination() {
@@ -149,7 +113,8 @@ public:
 		// path_pub = this->create_publisher<nav_msgs::msg::Path>("path", 10);
 		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("/start_mining");
 		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("/stop_mining");
-		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
+        this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
+        this->obstacle_distance_service = this->create_client<custom_types::srv::GetDistToObs>("/obstacle_distance");
 		this->end_proc_pub = this->create_publisher<std_msgs::msg::Bool>("end_process", 10);
 
 		ke_wait_for_service<decltype(start_mining_service)>(start_mining_service);
@@ -162,21 +127,14 @@ public:
 		// 	get_objectives_from_bounding_box(UCFT_LBERM_ZONE, 5, 3, 90, OpMode::OFFLOAD)
 		// );
 
-		// Move to coord in con zone
-		this->objectives.emplace_back(ObjectiveNode{4.2,1.6,90,OpMode::TRAVERSAL});
-		// TODO what happens when there is obs in way
-		// Move to exc zone border
-		this->objectives.emplace_back(ObjectiveNode{4.2,2,90,OpMode::TRAVERSAL});
-		// Mine to distance
-		this->objectives.emplace_back(ObjectiveNode{4.2,2.5,90,OpMode::MINING});
-		// Move to berm
-		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::OFFLOAD});
-		this->objectives.emplace_back(ObjectiveNode{0,0,90,OpMode::FINISHED});
-		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL) {
+		this->objectives.emplace_back(ObjectiveNode{6.38,4.5,45,OpMode::SEARCH_FOR_GOLD});
+		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::MINING});
+		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::TRAVERSAL});
+		this->objectives.emplace_back(ObjectiveNode{-1,-1,90,OpMode::OFFLOAD});
+		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::FINISHED});
+		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL || OpMode::SEARCH_FOR_GOLD) {
 			this->publish_destination();
 		}
-
-		RCLCPP_INFO(this->get_logger(), "king_engine node loaded");
 	}
 	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
 	{
@@ -198,8 +156,24 @@ public:
 						return;		// exit since we need to keep traversing
 					}
 				}
+				case OpMode::SEARCH_FOR_GOLD: {
+					if ((msg.pose.position.x > (KSC_EXC_ZONE.tlx + 0.6)) && 
+					(msg.pose.position.y > (KSC_EXC_ZONE.bry + 0.6))) {
+                        auto request = std::make_shared<custom_types::srv::GetDistToObs::Request>();
+                        auto response = this->obstacle_distance_service->async_send_request(request);
+                        rclcpp::spin_until_future_complete(this->shared_from_this(), response);
+                        if (response.get()->return_value >= SAFE_MINING_DIST) {
+                            this->objective_idx++;
+                            current_objective = std::get<3>(this->objectives[this->objective_idx]);
+                            // initializations for the next stage occur after this switch case, so break
+                            break;
+                        }
+					}
+                    return;
+				}
 				case OpMode::MINING: {		// the mining service gets started
-					if(is_mining_finished(msg.pose, this->mining_min_x, this->mining_max_x, this->mining_min_y, this->mining_max_y)) {	// check that the robot has mined far enough!?
+                    rclcpp::Time current_time = this->get_clock()->now();
+					if((current_time - time_since_last_op).seconds() >= MINING_TIME) {	// check that the robot has mined far enough!?
 						this->objective_idx++;
 						current_objective = std::get<3>(this->objectives[this->objective_idx]);
 						// handle going out of mining mode
@@ -243,7 +217,10 @@ public:
 			}
 			
 			// this block only ever runs if an operation finished and we need to process an initialization for the next stage
-			switch(current_objective) {
+
+            time_since_last_op = this->get_clock()->now();
+
+            switch(current_objective) {
 				case OpMode::MINING: {	// handle going into mining mode
 					auto request = std::make_shared<custom_types::srv::StartMining::Request>();
 					auto response = this->start_mining_service->async_send_request(request);
@@ -269,11 +246,10 @@ protected:
 	rclcpp::Client<custom_types::srv::StartMining>::SharedPtr start_mining_service;
 	rclcpp::Client<custom_types::srv::StopMining>::SharedPtr stop_mining_service;
 	rclcpp::Client<custom_types::srv::StartOffload>::SharedPtr start_offload_service;
+    rclcpp::Client<custom_types::srv::GetDistToObs>::SharedPtr obstacle_distance_service;
 	rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr end_proc_pub;
 
-	std::tuple<double, double, double, OpMode> test = std::make_tuple(50.0, 50.0, 0.0, (OpMode) 1);
-
-	std::vector<ObjectiveNode> objectives{ test };
+	std::vector<ObjectiveNode> objectives{};
 	size_t objective_idx{ 0 };
 
 	double
@@ -281,6 +257,7 @@ protected:
 		mining_max_x,
 		mining_min_y,
 		mining_max_y;
+    rclcpp::Time time_since_last_op;
 };
 
 
