@@ -56,7 +56,6 @@ public:
 		TRAVERSAL = 1,
 		MINING = 2,
 		OFFLOAD = 3,
-		// Find safe mining zone
 		SEARCH_FOR_GOLD = 4
 	};
 	using ObjectiveNode = std::tuple<double, double, double, OpMode>;	// x, y , theta, operation mode
@@ -133,12 +132,6 @@ public:
 		// 	get_objectives_from_bounding_box(UCFT_LBERM_ZONE, 5, 3, 90, OpMode::OFFLOAD)
 		// );
 
-		// Move to back coord in exc zone
-		// Call SEARCH_FOR_GOLD which is traversal but checks if is in exc zone
-		// 		If in exc zone mining mode
-		//		else continue traversing
-		// TRAVERSAL to berm
-		// OFFLOAD
 		this->objectives.emplace_back(ObjectiveNode{6.38,4.5,45,OpMode::SEARCH_FOR_GOLD});
 		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::MINING});
 		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::TRAVERSAL});
@@ -166,6 +159,18 @@ public:
 						break;
 					} else {
 						return;		// exit since we need to keep traversing
+					}
+				}
+				case OpMode::SEARCH_FOR_GOLD: {
+					if ((msg.pose.position.x > (KSC_EXC_ZONE.tlx + 0.6)) && 
+					(msg.pose.position.y > (KSC_EXC_ZONE.bry + 0.6))) {
+						this->objective_idx++;
+						current_objective = std::get<3>(this->objectives[this->objective_idx]);
+						// initializations for the next stage occur after this switch case, so break
+						break;
+					}
+					else {
+						return;
 					}
 				}
 				case OpMode::MINING: {		// the mining service gets started
