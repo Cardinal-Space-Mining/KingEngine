@@ -47,6 +47,8 @@ const BoundingBox KSC_CON_ZONE(3.88,2,6.88,0);
 const BoundingBox KSC_LBERM_ZONE(berm_x - 1.1, berm_y + 0.45, berm_x + 1.1, berm_y - 0.45);
 const BoundingBox KSC_SBERM_ZONE(berm_x - 1, berm_y + 0.35, berm_x + 1, berm_y - 0.35);
 
+const double MINING_TIME = 5.0;
+
 
 class KingEngineNode : public rclcpp::Node
 {
@@ -80,25 +82,25 @@ private:
 		);
 	}
 	
-	static std::vector<ObjectiveNode> get_objectives_from_bounding_box(BoundingBox bb, int x_divisions, int y_divisions, double theta, OpMode op) {
-		std::vector<ObjectiveNode> result{};
-		double dx = (bb.brx - bb.tlx) / (float)(x_divisions+1);
-		double dy = (bb.bry - bb.tly) / (float)(y_divisions+1);
-		for (double y = bb.tly - dy/2.0; y > bb.bry; y += dy) {
-			for (double x = bb.tlx + dx/2.0; x < bb.brx; x += dx) {
-				result.emplace_back(ObjectiveNode{x, y, theta, op});
-			}
-		}
-		return result;
-	}
-
-	void combine_keypoints(const std::vector<ObjectiveNode> &mining, const std::vector<ObjectiveNode> &offload) {
-		assert(mining.size() == offload.size());
-		for (size_t i = 0; i < mining.size(); i++) {
-			this->objectives.emplace_back(mining[i]);
-			this->objectives.emplace_back(offloa;d[i]);
-		}
-	}
+//	static std::vector<ObjectiveNode> get_objectives_from_bounding_box(BoundingBox bb, int x_divisions, int y_divisions, double theta, OpMode op) {
+//		std::vector<ObjectiveNode> result{};
+//		double dx = (bb.brx - bb.tlx) / (float)(x_divisions+1);
+//		double dy = (bb.bry - bb.tly) / (float)(y_divisions+1);
+//		for (double y = bb.tly - dy/2.0; y > bb.bry; y += dy) {
+//			for (double x = bb.tlx + dx/2.0; x < bb.brx; x += dx) {
+//				result.emplace_back(ObjectiveNode{x, y, theta, op});
+//			}
+//		}
+//		return result;
+//	}
+//
+//	void combine_keypoints(const std::vector<ObjectiveNode> &mining, const std::vector<ObjectiveNode> &offload) {
+//		assert(mining.size() == offload.size());
+//		for (size_t i = 0; i < mining.size(); i++) {
+//			this->objectives.emplace_back(mining[i]);
+//			this->objectives.emplace_back(offload[i]);
+//		}
+//	}
 
 	void publish_destination() {
 		geometry_msgs::msg::PoseStamped target;
@@ -148,7 +150,21 @@ public:
 			this->publish_destination();
 		}
 	}
-	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
+
+
+// SEARCHING_FOR_GOLD FLOWPLAN:
+// (x, y, yaw, SEARCHING_FOR_GOLD)
+//
+// while not at (x,y):
+//   move towards (x, y)
+//   if (comfortably) in mining zone:
+//     ray_dist = shoot_raycast_forward()
+//     if ray_dist >= TARGET_MINING_LENGTH:
+//       break out, finished with search
+//   // we will continue moving toward (x, y) at slightly different pose, try again
+
+
+    void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
 	{
 		if (this->objective_idx >= this->objectives.size()) {
 			// We have finished all scheduled objectives, we don't have to do anything else
@@ -169,7 +185,8 @@ public:
 					}
 				}
 				case OpMode::MINING: {		// the mining service gets started
-					if(is_mining_finished(msg.pose, this->mining_min_x, this->mining_max_x, this->mining_min_y, this->mining_max_y)) {	// check that the robot has mined far enough!?
+                    rclcpp::Time current_time = this->get_clock()->now();
+					if((current_time - time_since_last_op).seconds() >= MINING_TIME) {	// check that the robot has mined far enough!?
 						this->objective_idx++;
 						current_objective = std::get<3>(this->objectives[this->objective_idx]);
 						// handle going out of mining mode
@@ -206,7 +223,10 @@ public:
 			}
 			
 			// this block only ever runs if an operation finished and we need to process an initialization for the next stage
-			switch(current_objective) {
+
+            time_since_last_op = this->get_clock()->now();
+
+            switch(current_objective) {
 				case OpMode::MINING: {	// handle going into mining mode
 					auto request = std::make_shared<custom_types::srv::StartMining::Request>();
 					auto response = this->start_mining_service->async_send_request(request);
@@ -243,6 +263,7 @@ protected:
 		mining_max_x,
 		mining_min_y,
 		mining_max_y;
+    rclcpp::Time time_since_last_op;
 };
 
 
