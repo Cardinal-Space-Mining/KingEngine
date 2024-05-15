@@ -132,7 +132,7 @@ public:
 		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::TRAVERSAL});
 		this->objectives.emplace_back(ObjectiveNode{-1,-1,90,OpMode::OFFLOAD});
 		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::FINISHED});
-		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL) {
+		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL || OpMode::SEARCH_FOR_GOLD) {
 			this->publish_destination();
 		}
 	}
@@ -249,9 +249,7 @@ protected:
     rclcpp::Client<custom_types::srv::GetDistToObs>::SharedPtr obstacle_distance_service;
 	rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr end_proc_pub;
 
-	std::tuple<double, double, double, OpMode> test = std::make_tuple(50.0, 50.0, 0.0, (OpMode) 1);
-
-	std::vector<ObjectiveNode> objectives{ test };
+	std::vector<ObjectiveNode> objectives{};
 	size_t objective_idx{ 0 };
 
 	double
