@@ -85,14 +85,6 @@ private:
 			std::abs(yaw - std::get<2>(target)) < heading_epsilon_deg
 		);
 	}
-	static bool is_mining_finished(const geometry_msgs::msg::Pose& pose, double x_min, double x_max, double y_min, double y_max) {
-		const geometry_msgs::msg::Point& pt = pose.position;
-		return (
-			(pt.x < x_min || pt.x > x_max) ||
-			(pt.y < y_min || pt.y > y_max)
-		);
-	}
-	
 
 	void publish_destination() {
 		geometry_msgs::msg::PoseStamped target;
