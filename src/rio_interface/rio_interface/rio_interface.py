@@ -20,10 +20,10 @@ class RioInterface(Node):
         self.declare_parameter(RioInterface.__SERIAL_FD_PARAM__, rclpy.Parameter.Type.STRING)
 
 
-        self.service1 = self.create_service(SetTrackVelocity, 'set_track_velocity', self.set_track_velo_callback)
-        self.service2 = self.create_service(StartMining, 'start_mining', self.start_mining_callback)
-        self.service3 = self.create_service(StopMining, 'stop_mining', self.stop_mining_callback)
-        self.service4 = self.create_service(StartOffload, 'start_offload', self.start_offload_callback)
+        self.service1 = self.create_service(SetTrackVelocity, '/set_track_velocity', self.set_track_velo_callback)
+        self.service2 = self.create_service(StartMining, '/start_mining', self.start_mining_callback)
+        self.service3 = self.create_service(StopMining, '/stop_mining', self.stop_mining_callback)
+        self.service4 = self.create_service(StartOffload, '/start_offload', self.start_offload_callback)
         
         self.end_proc_sub = self.create_subscription(Bool, "end_process", self.end_process_cb, 10)
 

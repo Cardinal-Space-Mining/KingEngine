@@ -29,8 +29,8 @@ public:
   TraversalNode()
       : Node("traversal"),
         motionProfile(std::make_unique<profile>()),
-        path_sub(this->create_subscription<nav_msgs::msg::Path>("path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
-        location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("location", 10, std::bind(&TraversalNode::location_change_cb, this, _1))),
+        path_sub(this->create_subscription<nav_msgs::msg::Path>("/pathplan/nav_path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
+        location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 10, std::bind(&TraversalNode::location_change_cb, this, _1))),
         end_proc_sub(this->create_subscription<std_msgs::msg::Bool>("end_process", 10, std::bind(&TraversalNode::end_process_cb, this, _1))),
         tracks(this->create_client<custom_types::srv::SetTrackVelocity>("set_track_velocity"))
   {
@@ -155,6 +155,7 @@ public:
             set_left_track_velo(v1);
           }
     } else { // set the velocities such that they are doing a point turn. Should we just gun it?
+    //Different than a point turn at the end of a path. Don't need to worry about small angular percentages
         if (angular >=0) {
           set_right_track_velo((max_velocity * angular * -1));
           set_left_track_velo(max_velocity * angular);

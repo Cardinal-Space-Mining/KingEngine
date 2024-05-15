@@ -220,22 +220,28 @@ def main():
     rclpy.logging.get_logger("aruco").info("aruco time!")
 
     # SINED: get initial pose using transformed aruco vals
-    est = ArucoEstimator()
-    try:
-        while not est.sined():
-            time.sleep(.1)
-    except KeyboardInterrupt:
-        est.kill()
-        exit()
-    position, orientation = est.get_init()
-    # position = (position @ center_angle) + center_offset
-    # orientation = orientation @ center_angle
+    # est = ArucoEstimator()
+    # try:
+    #     while not est.sined():
+    #         time.sleep(.1)
+    # except KeyboardInterrupt:
+    #     est.kill()
+    #     exit()
+    # position, orientation = est.get_init()
+    # # position = (position @ center_angle) + center_offset
+    # # orientation = orientation @ center_angle
     rclpy.logging.get_logger("aruco").info("SINED")
+    position = np.array([[0, 0, 0]])
+    orientation = np.array([
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1]
+    ])
 
     # SEELED: start DLIO
     try:
         dlio = subprocess.Popen(
-            'source /home/gavin/CSM/KingEngine/install/setup.bash && ros2 launch direct_lidar_inertial_odometry dlio.launch.py rviz:=false pointcloud_topic:=/filtered_cloud imu_topic:=/filtered_imu',
+            'source /home/po/KingEngine/install/setup.bash && ros2 launch direct_lidar_inertial_odometry dlio.launch.py rviz:=false pointcloud_topic:=/filtered_cloud imu_topic:=/filtered_imu',
             shell=True,
             executable="/bin/bash"
         )
@@ -248,8 +254,7 @@ def main():
         rclpy.logging.get_logger("aruco").info("DELIVERED")
         minimal_subscriber.destroy_node()
         rclpy.shutdown()
-    except Exception as e:
-        print(e)
+    except KeyboardInterrupt:
         subprocess.run(['kill', '-9 ', str(dlio.pid)])
 
 if __name__ == '__main__':

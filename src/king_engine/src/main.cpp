@@ -18,7 +18,6 @@
 #include "custom_types/srv/stop_mining.hpp"
 #include "custom_types/srv/start_offload.hpp"
 
-
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
@@ -28,51 +27,51 @@ class BoundingBox {
 	public:
 	// if corners, mining zone, else berm zone
 	BoundingBox(double _x1, double _y1, double _x2, double _y2) {
-		// if (corners) {
     tlx = _x1;
     tly = _y1;
     brx = _x2;
     bry = _y2;
-		// } else {
-    // tlx = _x1 - _x2/2.0;
-    // tly = _y1 - _x2/2.0;
-    // brx = _x1 + _y2/2.0;
-    // bry = _y1 + _x2/2.0;
-		// }
 	}
 	double tlx, tly, brx, bry;
 };
-// tlxtlybry byryx
-// bool mining = true;
 
-// BoundingBox UCF_MINING_ZONE(tlx, tly, brx, bry, true);
-// BoundingBox UCF_BERM_ZONE(cntrx, cntry, width, height, false);
-// const BoundingBox KSC_MINING_ZONE(3.88, 3.5, 6.88, 3.5, true);
-// TODO update actual x and y coord of berm zone
-// const BoundingBox KSC_BERM_ZONE(5.8, 1.2, 2, 0.7, false);
+// const BoundingBox UCFT_ARENA_ZONE(0,8.14,4.57,0);
+// const BoundingBox UCFT_OBS_ZONE(0,4.07,4.57,0);
+// const BoundingBox UCFT_EXC_ZONE(0,8.14,4.57,4.07);
+// const BoundingBox UCFT_CON_ZONE(2.57,8.14,4.57,5.54);
+// const BoundingBox UCFT_LBERM_ZONE(3.12,7.59,4.02,6.09);
+// const BoundingBox UCFT_SBERM_ZONE(3.22,7.49,3.92,6.19);
 
+// const BoundingBox UCFB_ARENA_ZONE(0,4.57,8.14,0);
+// const BoundingBox UCFB_OBS_ZONE(0,4.57,4.07,0);
+// const BoundingBox UCFB_EXC_ZONE(4.07,4.57,8.14,0);
+// const BoundingBox UCFB_CON_ZONE(5.54,4.57,8.14,2.57);
+// const BoundingBox UCFB_LBERM_ZONE(6.09,4.02,7.59,3.12);
+// const BoundingBox UCFB_SBERM_ZONE(6.19,3.92,7.49,3.22);
 
+// TODO set x and y to actual coordinates
+const double berm_x = 3.74;
+const double berm_y = 0.65;
 // (tlx, tly, brx, bry)
-const BoundingBox UCFT_ARENA_ZONE(0,8.14,4.57,0);
-const BoundingBox UCFT_OBS_ZONE(0,4.07,4.57,0);
-const BoundingBox UCFT_EXC_ZONE(0,8.14,4.57,4.07);
-const BoundingBox UCFT_CON_ZONE(2.57,8.14,4.57,5.54);
-const BoundingBox UCFT_LBERM_ZONE(3.12,7.59,4.02,6.09);
-const BoundingBox UCFT_SBERM_ZONE(3.22,7.49,3.92,6.19);
-
-const BoundingBox UCFB_ARENA_ZONE(0,4.57,8.14,0);
-const BoundingBox UCFB_OBS_ZONE(0,4.57,4.07,0);
-const BoundingBox UCFB_EXC_ZONE(4.07,4.57,8.14,0);
-const BoundingBox UCFB_CON_ZONE(5.54,4.57,8.14,2.57);
-const BoundingBox UCFB_LBERM_ZONE(6.09,4.02,7.59,3.12);
-const BoundingBox UCFB_SBERM_ZONE(6.19,3.92,7.49,3.22);
-
 const BoundingBox KSC_ARENA_ZONE(0,5,6.88,0);
 const BoundingBox KSC_OBS_ZONE(0,5,3.88,0);
 const BoundingBox KSC_EXC_ZONE(3.88,5,6.88,0);
 const BoundingBox KSC_CON_ZONE(3.88,2,6.88,0);
-const BoundingBox KSC_LBERM_ZONE(4.38,1.1,6.58,0.2);
-const BoundingBox KSC_SBERM_ZONE(4.48,1.0,6.48,0.3);
+// const BoundingBox KSC_LBERM_ZONE(4.38,1.1,6.58,0.2);
+// const BoundingBox KSC_SBERM_ZONE(4.48,1.0,6.48,0.3);
+const BoundingBox KSC_LBERM_ZONE(berm_x - 1.1, berm_y + 0.45, berm_x + 1.1, berm_y - 0.45);
+const BoundingBox KSC_SBERM_ZONE(berm_x - 1, berm_y + 0.35, berm_x + 1, berm_y - 0.35);
+
+template <typename T>
+void ke_wait_for_service(T& client){
+	while (!client->wait_for_service(1s)) {
+		if (!rclcpp::ok()) {
+		RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+		std::exit(EXIT_FAILURE);
+    }
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+  }
+}
 
 
 class KingEngineNode : public rclcpp::Node
@@ -145,23 +144,39 @@ private:
 public:
 	KingEngineNode() : Node("king_engine")
 	{
-		this->location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("location", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
-		this->destination_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("destination", 10);
+		this->location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
+		this->destination_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/target_pose", 10);
 		// path_pub = this->create_publisher<nav_msgs::msg::Path>("path", 10);
-		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("start_mining");
-		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("stop_mining");
-		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("start_offload");
+		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("/start_mining");
+		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("/stop_mining");
+		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
 		this->end_proc_pub = this->create_publisher<std_msgs::msg::Bool>("end_process", 10);
 
-    // TODO if this is to find the total area there is a variable for that now.
+		ke_wait_for_service<decltype(start_mining_service)>(start_mining_service);
+		ke_wait_for_service<decltype(stop_mining_service)>(stop_mining_service);
+		ke_wait_for_service<decltype(start_offload_service)>(start_offload_service);
+
+    	// TODO if this is to find the total area there is a variable for that now.
 		// this->combine_keypoints(
 		// 	get_objectives_from_bounding_box(UCFT_EXC_ZONE, 5, 3, 90, OpMode::MINING),
 		// 	get_objectives_from_bounding_box(UCFT_LBERM_ZONE, 5, 3, 90, OpMode::OFFLOAD)
 		// );
 
+		// Move to coord in con zone
+		this->objectives.emplace_back(ObjectiveNode{4.2,1.6,90,OpMode::TRAVERSAL});
+		// TODO what happens when there is obs in way
+		// Move to exc zone border
+		this->objectives.emplace_back(ObjectiveNode{4.2,2,90,OpMode::TRAVERSAL});
+		// Mine to distance
+		this->objectives.emplace_back(ObjectiveNode{4.2,2.5,90,OpMode::MINING});
+		// Move to berm
+		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::OFFLOAD});
+		this->objectives.emplace_back(ObjectiveNode{0,0,90,OpMode::FINISHED});
 		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL) {
 			this->publish_destination();
 		}
+
+		RCLCPP_INFO(this->get_logger(), "king_engine node loaded");
 	}
 	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
 	{
@@ -256,7 +271,9 @@ protected:
 	rclcpp::Client<custom_types::srv::StartOffload>::SharedPtr start_offload_service;
 	rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr end_proc_pub;
 
-	std::vector<ObjectiveNode> objectives{};
+	std::tuple<double, double, double, OpMode> test = std::make_tuple(50.0, 50.0, 0.0, (OpMode) 1);
+
+	std::vector<ObjectiveNode> objectives{ test };
 	size_t objective_idx{ 0 };
 
 	double

@@ -22,6 +22,10 @@ struct point
 
 	point(double x, double y) : x(x), y(y){};
 
+	bool close(const point &b, double epsilon) {
+		return ((x > b.x - epsilon && x < b.x + epsilon) && (y > b.y - epsilon && y < b.y + epsilon));
+	};
+
 	point() = default;
 };
 
@@ -68,7 +72,7 @@ public:
 	// 	m_path = std::vector<motion_node>();
 	// };
 
-	profile() : linear_velocity(0), max_velocity(150), angular_velocity(0), cur_angle(0), tar_angle(0), distance(1), at_destination(false), m_path(std::vector<motion_node>()){}; //path(std::vector<point>()),
+	profile() : linear_velocity(0), max_velocity(50), angular_velocity(0), cur_angle(0), tar_angle(0), distance(1), at_destination(false), m_path(std::vector<motion_node>()){}; //path(std::vector<point>()),
 
 	void follow_path();
 	void setCurrent(double new_x, double new_y) { current = point(new_x, new_y); }
