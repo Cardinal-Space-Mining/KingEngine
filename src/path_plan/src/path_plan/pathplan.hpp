@@ -35,7 +35,8 @@ protected:
           const cv::Mat data,
           const int map_w, const int map_h,
           const int arena_min_x, const int arena_min_y,
-          const int arena_width, const int arena_height);
+          const int arena_width, const int arena_height,
+          const int edge_padding);
 
   void globulize();
 

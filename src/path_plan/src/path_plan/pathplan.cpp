@@ -70,11 +70,13 @@ const std::string PathPlanNode::AVOID_ZONE_THICKNESS_PARAM_NAME = "avoidance_zon
 const std::string PathPlanNode::ARENA_WIDTH_PARAM_NAME = "arena_width";
 const std::string PathPlanNode::ARENA_HEIGHT_PARAM_NAME = "arena_height";
 
+const double ARENA_MAP_PADDING = 0.25;
+
 PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   node_init(this->config_node()),
 							   lidar_data_sub(this->create_subscription<nav_msgs::msg::OccupancyGrid>("/ldrp/obstacle_grid", 1, std::bind(&PathPlanNode::lidar_change_cb, this, std::placeholders::_1))),
 							   dest_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/target_pose", 1, std::bind(&PathPlanNode::destination_change_cb, this, std::placeholders::_1))),
-							   location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 1, std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1))),
+							   location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/current_pose", 1, std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1))),
 							   avoidance_zone_flag_sub(this->create_subscription<std_msgs::msg::Bool>("avoid_zone", 1, std::bind(&PathPlanNode::avoid_zone_flag_change_cb, this, std::placeholders::_1))),
 							   end_proc_sub(this->create_subscription<std_msgs::msg::Bool>("end_process", 1, std::bind(&PathPlanNode::end_process_cb, this, std::placeholders::_1))),
 							   path_pub(this->create_publisher<nav_msgs::msg::Path>("/pathplan/nav_path", 1)),
@@ -110,8 +112,8 @@ PathPlanNode::PathPlanNode() : Node("path_plan"),
 
     // Constant data for the published map
     this->weights.header.frame_id = this->output_frame_id;
-    this->weights.info.origin.position.x = 0.0;
-    this->weights.info.origin.position.y = 0.0;
+    this->weights.info.origin.position.x = -ARENA_MAP_PADDING;
+    this->weights.info.origin.position.y = -ARENA_MAP_PADDING;
     this->weights.info.origin.position.z = 0.0;
     this->weights.info.origin.orientation.x = 0.0;
     this->weights.info.origin.orientation.y = 0.0;
@@ -126,19 +128,23 @@ cv::Mat PathPlanNode::crop_to_arena_size(
         const cv::Mat data,
         const int map_w, const int map_h,
         const int arena_min_x, const int arena_min_y,
-        const int arena_w, const int arena_h)
+        const int arena_w, const int arena_h,
+        const int edge_padding)
 {
     // Pad the data to guarantee the map contains the entire arena (filling unknown spots with 0)
 
-    cv::Mat padded_data = cv::Mat::zeros(cv::Size{map_w + arena_w*2, map_h + arena_h*2}, CV_8UC1);
-    cv::Rect centered_rect{arena_w, arena_h, map_w, map_h};
+    int padded_arena_w = arena_w + (edge_padding*2);
+    int padded_arena_h = arena_h + (edge_padding*2);
+
+    cv::Mat padded_data = cv::Mat::zeros(cv::Size{map_w + (padded_arena_w*2), map_h + (padded_arena_h*2)}, CV_8UC1);
+    cv::Rect centered_rect{padded_arena_w, padded_arena_h, map_w, map_h};
     data.copyTo(padded_data(centered_rect));
 
     // Crop the padded data down to the rectangle of the arena
-    cv::Mat arena_mat = cv::Mat::zeros(cv::Size{arena_w, arena_h}, CV_8UC1);
+    cv::Mat arena_mat = cv::Mat::zeros(cv::Size{padded_arena_w, padded_arena_h}, CV_8UC1);
 
     // Account for translation from padding with the corner coords
-    cv::Rect crop_rect{arena_min_x+arena_w, arena_min_y+arena_h, arena_w, arena_h};
+    cv::Rect crop_rect{arena_min_x+(padded_arena_w-edge_padding), arena_min_y+(padded_arena_h-edge_padding), padded_arena_w, padded_arena_h};
 
     (padded_data(crop_rect)).copyTo(arena_mat);
 
@@ -149,29 +155,45 @@ void PathPlanNode::globulize() {
     std::chrono::high_resolution_clock::time_point _t = std::chrono::high_resolution_clock::now();
 
     const float
-        resolution = input_weights.info.resolution;
+        resolution = this->input_weights.info.resolution;
     const int
             map_w = static_cast<int>(input_weights.info.width),
             map_h = static_cast<int>(input_weights.info.height),
             arena_w = static_cast<int>(arena_width/resolution),
             arena_h = static_cast<int>(arena_height/resolution),
             map_offset_x = static_cast<int>(input_weights.info.origin.position.x / resolution),
-            map_offset_y = static_cast<int>(input_weights.info.origin.position.y / resolution);
+            map_offset_y = static_cast<int>(input_weights.info.origin.position.y / resolution),
+            padding = static_cast<int>(ARENA_MAP_PADDING / resolution),
+            padded_arena_w = arena_w + 2*padding,
+            padded_arena_h = arena_h + 2*padding;
 
     cv::Mat _data{map_h, map_w, CV_8UC1, input_weights.data.data()};
-    cv::Mat _dest = cv::Mat::zeros(cv::Size{map_w, map_h}, CV_8UC1);
-
     cv::Mat arena_weights =
             this->crop_to_arena_size(_data,
                                      map_w, map_h,
                                      -map_offset_x, -map_offset_y,
-                                     arena_w, arena_h);
+                                     arena_w, arena_h,
+                                     padding);
+
+    // Fill padding with maximum weight
+    // left padding
+    cv::rectangle(arena_weights,
+                  cv::Point{0,0}, cv::Point{padding, padded_arena_h-1}, cv::Scalar(255), cv::FILLED);
+    // bottom padding
+    cv::rectangle(arena_weights,
+                  cv::Point{0,0}, cv::Point{padded_arena_w-1, padding}, cv::Scalar(255), cv::FILLED);
+    // right padding
+    cv::rectangle(arena_weights,
+                  cv::Point{padded_arena_w-1,0}, cv::Point{padded_arena_w-padding, arena_h-1}, cv::Scalar(255), cv::FILLED);
+    // top padding
+    cv::rectangle(arena_weights,
+                  cv::Point{0,padded_arena_h-1}, cv::Point{padded_arena_w-1, padded_arena_h-padding}, cv::Scalar(255), cv::FILLED);
 
     if (include_avoidance_zone) {
         cv::line(
-                _data,
-                cv::Point(this->avoidance_barrier_x/resolution, this->avoidance_barrier_y/resolution), // top left of avoidance zone
-                cv::Point(this->avoidance_barrier_x/resolution, arena_h - 1), // bottom left of avoidance zone
+                arena_weights,
+                cv::Point(this->avoidance_barrier_x/resolution - padding, this->avoidance_barrier_y/resolution - padding), // top left of avoidance zone
+                cv::Point(this->avoidance_barrier_x/resolution - padding, 0), // bottom left of avoidance zone
                 cv::Scalar(255),
                 this->avoidance_barrier_thickness,
                 cv::LINE_8);
@@ -182,6 +204,8 @@ void PathPlanNode::globulize() {
     const cv::Size
             kernel_size{kernel_diam, kernel_diam};
 
+    cv::Mat _dest = cv::Mat::zeros(cv::Size{padded_arena_w, padded_arena_h}, CV_8UC1);
+
     cv::dilate(
             arena_weights,
             _dest,
@@ -191,7 +215,7 @@ void PathPlanNode::globulize() {
             arena_weights,
             kernel_size,
             10, 10,
-            cv::BorderTypes::BORDER_CONSTANT);
+            cv::BorderTypes::BORDER_REPLICATE);
     cv::max(
             arena_weights,
             cv::Scalar::all(this->min_weight),
@@ -204,10 +228,10 @@ void PathPlanNode::globulize() {
     this->weights.header.stamp = this->get_clock()->now();
     this->weights.info.map_load_time = this->get_clock()->now();
     this->weights.info.resolution = input_weights.info.resolution;
-    this->weights.info.width = arena_w;
-    this->weights.info.height = arena_h;
+    this->weights.info.width = padded_arena_w;
+    this->weights.info.height = padded_arena_h;
     this->weights.data.clear();
-    this->weights.data.resize(arena_w*arena_h);
+    this->weights.data.resize(padded_arena_w*padded_arena_h);
     std::copy(arena_weights.begin<uint8_t>(), arena_weights.end<uint8_t>(), this->weights.data.begin());
 }
 
@@ -230,6 +254,7 @@ void PathPlanNode::destination_change_cb(const geometry_msgs::msg::PoseStamped &
 
 void PathPlanNode::avoid_zone_flag_change_cb(const std_msgs::msg::Bool &flag) {
     this->include_avoidance_zone = flag.data;
+    this->new_map_data = true;
 }
 
 void PathPlanNode::export_data()
@@ -251,8 +276,8 @@ void PathPlanNode::export_data()
 				reinterpret_cast<uint8_t *>(this->weights.data.data()),
 				this->weights.info.width,
 				this->weights.info.height,
-				this->weights.info.origin.position.x,
-				this->weights.info.origin.position.y,
+				this->weights.info.origin.position.x - ARENA_MAP_PADDING,
+				this->weights.info.origin.position.y - ARENA_MAP_PADDING,
 				this->weights.info.resolution,
 				this->current_pose.position.x,
 				this->current_pose.position.y,
@@ -286,14 +311,6 @@ void PathPlanNode::export_data()
 		}
 
 		this->path_pub->publish(ros_path);
-
-
-        
-	}
-
-	if (new_map_data)
-	{
-		this->weight_map_pub->publish(this->weights);
 	}
 
     new_map_data = false;

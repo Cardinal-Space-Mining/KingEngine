@@ -15,7 +15,7 @@ def generate_launch_description():
 		description = 'Input obstacle grid topic name'
 	)
 
-	pose_topic_cfg = LaunchConfiguration('pose_topic', default = '/dlo/odom_node/pose')
+	pose_topic_cfg = LaunchConfiguration('pose_topic', default = 'adjusted_pose')
 	# pose_topic_cfg = LaunchConfiguration('pose_topic', default = '/uesim/pose')
 	declare_pose_topic_arg = DeclareLaunchArgument(
 		'pose_topic',
