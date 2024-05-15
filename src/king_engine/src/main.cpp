@@ -12,6 +12,7 @@
 // #include "custom_types/msg/location.hpp"
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <std_msgs/msg/bool.hpp>
 
 #include "custom_types/srv/start_mining.hpp"
 #include "custom_types/srv/stop_mining.hpp"
@@ -149,6 +150,7 @@ public:
 		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("/start_mining");
 		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("/stop_mining");
 		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
+		this->end_proc_pub = this->create_publisher<std_msgs::msg::Bool>("end_process", 10);
 
 		ke_wait_for_service<decltype(start_mining_service)>(start_mining_service);
 		ke_wait_for_service<decltype(stop_mining_service)>(stop_mining_service);
@@ -226,6 +228,13 @@ public:
 				case OpMode::FINISHED: {
 					// send command to disable robot? (or do an emote/hit the griddy)?
 					// falls through to return
+					std_msgs::msg::Bool end_all_processes;
+
+					end_all_processes.data = true;
+
+					this->end_proc_pub->publish(end_all_processes);
+					std::exit(0);
+
 					return;
 				}
 				default: {
@@ -260,6 +269,7 @@ protected:
 	rclcpp::Client<custom_types::srv::StartMining>::SharedPtr start_mining_service;
 	rclcpp::Client<custom_types::srv::StopMining>::SharedPtr stop_mining_service;
 	rclcpp::Client<custom_types::srv::StartOffload>::SharedPtr start_offload_service;
+	rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr end_proc_pub;
 
 	std::tuple<double, double, double, OpMode> test = std::make_tuple(50.0, 50.0, 0.0, (OpMode) 1);
 

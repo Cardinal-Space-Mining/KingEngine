@@ -9,6 +9,8 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "custom_types/srv/get_dist_to_obs.hpp"
+#include <std_msgs/msg/bool.hpp>
 
 #include <opencv2/core.hpp>
 
@@ -26,19 +28,22 @@ protected:
 	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg);
 	/** Called when target pose gets updated */
 	void destination_change_cb(const geometry_msgs::msg::PoseStamped &msg);
-    /** Called when changing whether we should avoid crossing from the navigation zone to construction zone */
-    void avoid_zone_flag_change_cb(const std_msgs::msg::Bool &flag);
+  /** Called when changing whether we should avoid crossing from the navigation zone to construction zone */
+  void avoid_zone_flag_change_cb(const std_msgs::msg::Bool &flag);
 
-    cv::Mat crop_to_arena_size(
-            const cv::Mat data,
-            const int map_w, const int map_h,
-            const int arena_min_x, const int arena_min_y,
-            const int arena_width, const int arena_height);
+  cv::Mat crop_to_arena_size(
+          const cv::Mat data,
+          const int map_w, const int map_h,
+          const int arena_min_x, const int arena_min_y,
+          const int arena_width, const int arena_height);
 
-    void globulize();
+  void globulize();
 
+	void end_process_cb(const std_msgs::msg::Bool &end);
+	
 	/** Rerun navigation through the currently stored map and export the resulting path */
 	void export_data();
+	void export_raycast(std::shared_ptr<custom_types::srv::GetDistToObs::Request> request, std::shared_ptr<custom_types::srv::GetDistToObs::Response> response);
 
 	bool config_node();
 
@@ -75,10 +80,13 @@ protected:
 	const rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr dest_sub;
 	const rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr location_sub;
     const rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr avoidance_zone_flag_sub;
+	const rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr end_proc_sub;
 
     const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub;
     const rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr weight_map_pub;
     const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr raycast_pub;
+
+	const rclcpp::Service<custom_types::srv::GetDistToObs>::SharedPtr raycast_service;
 
 	const float robot_width;
     const int turn_cost, min_weight;

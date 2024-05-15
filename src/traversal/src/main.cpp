@@ -11,6 +11,7 @@
 
 #include <nav_msgs/msg/path.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <std_msgs/msg/bool.hpp>
 
 #include "custom_types/srv/set_track_velocity.hpp"
 // #include "custom_types/msg/location.hpp"
@@ -30,6 +31,7 @@ public:
         motionProfile(std::make_unique<profile>()),
         path_sub(this->create_subscription<nav_msgs::msg::Path>("/pathplan/nav_path", 10, std::bind(&TraversalNode::path_change_cb, this, _1))),
         location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 10, std::bind(&TraversalNode::location_change_cb, this, _1))),
+        end_proc_sub(this->create_subscription<std_msgs::msg::Bool>("end_process", 10, std::bind(&TraversalNode::end_process_cb, this, _1))),
         tracks(this->create_client<custom_types::srv::SetTrackVelocity>("set_track_velocity"))
   {
     while (!tracks->wait_for_service(250ms))
@@ -63,6 +65,14 @@ public:
       cpath[i].y = path.poses[i].pose.position.y;
     }
     this->on_path_change(cpath);
+  }
+
+  void end_process_cb(const std_msgs::msg::Bool &end){
+    if(end.data == true){
+      	RCLCPP_INFO(this->get_logger(),
+			    "Traversal Node Exited Successfully.");
+          std::exit(0);
+    }
   }
 
   bool set_right_track_velo(double turns_per_second)
@@ -163,6 +173,7 @@ private:
   std::unique_ptr<profile> motionProfile;
   rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr location_sub;
+  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr end_proc_sub;
   rclcpp::Client<custom_types::srv::SetTrackVelocity>::SharedPtr tracks;
 };
 
