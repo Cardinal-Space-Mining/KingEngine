@@ -15,7 +15,30 @@
 #include <iostream>
 #include <stdlib.h>
 #include <cstdlib>
+#include "motion_profile.hpp"
 
+/**
+ * 
+                    _.---._
+                _.-~       ~-._
+            _.-~               ~-._
+        _.-~                       ~---._
+    _.-~                                 ~\
+ .-~                                    _.;
+ :-._                               _.-~ ./
+ `-._~-._                   _..__.-~ _.-~
+  /  ~-._~-._              / .__..--~----._
+ \_____(_;-._\.        _.-~_/       ~).. . \
+    /(_____  \`--...--~_.-~______..-+_______)
+  .(_________/`--...--~/    _/           /\
+ /-._     \_     (___./_..-~__.....__..-~./
+ `-._~-._   ~\--------~  .-~_..__.-~ _.-~
+     ~-._~-._ ~---------'  / .__..--~
+         ~-._\.        _.-~_/
+             \`--...--~_.-~
+              `--...--~
+
+*/
 // using point = std::pair<uint16_t, uint16_t>;
 
 using namespace std;
@@ -231,6 +254,13 @@ void profile::setTargetAngle(double target)
     }
 
     tar_angle = normal;
+}
+
+void profile::normalizeCurrent(double current) {
+    double normal = std::fmod(current, 360);
+    if (normal < 0) {
+        normal += 360;
+    }
 }
 
 void profile::pointTurn()

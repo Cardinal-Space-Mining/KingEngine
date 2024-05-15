@@ -79,8 +79,9 @@ public:
 	void setCurrentHeading(double new_heading) {cur_angle = new_heading;};
 	void setTargetHeading(point target);
 	void setTargetAngle(double target);
-	void pointTurn();
-	void compile_path_linear(std::vector<point> path);
+    void normalizeCurrent(double current);
+    void pointTurn();
+    void compile_path_linear(std::vector<point> path);
 	double getLinearVelocity() {return linear_velocity;};
 	double getAngularVelocity() {return angular_velocity;};
 	double getMaxVelocity() {return max_velocity;};

@@ -121,7 +121,7 @@ public:
   {
     //On the change of the location, we should update the motion profile so its current point and heading matches what we get, then we follow the path
     motionProfile->setCurrent(x_meters, y_meters);
-    motionProfile->setCurrentHeading(yaw_degrees);
+    motionProfile->setCurrentHeading(motionProfile->normalizeCurrent(yaw_degrees));
 
     motionProfile->follow_path(); //storing the velocity multipliers  here
 
