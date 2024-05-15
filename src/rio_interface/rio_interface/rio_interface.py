@@ -55,6 +55,8 @@ class RioInterface(Node):
         self._logger.debug(f"Stopped Mining")
     def end_process_cb(self, end):
         if(end.data == True):
+            self.serial_ctrler._send_msg(serial_api.SerialManager.MOTOR_CTRL, 0, 0)
+            self.serial_ctrler._send_msg(serial_api.SerialManager.MOTOR_CTRL, 1, 0)
             self._logger.debug(f"RIO_Interface Node Exited Successfully.")
             sys.exit(0)
 def main(args=None):
