@@ -9,4 +9,7 @@
     avoidance_zone_corner_x: 3.88
     avoidance_zone_corner_y: 3.00
 
+    arena_width: 6.88
+    arena_height: 5.00
+
     output_frame: "world"
