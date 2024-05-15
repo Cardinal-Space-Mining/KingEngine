@@ -74,6 +74,7 @@ PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   dest_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("target_pose", 1, std::bind(&PathPlanNode::destination_change_cb, this, std::placeholders::_1))),
 							   location_sub(this->create_subscription<geometry_msgs::msg::PoseStamped>("current_pose", 1, std::bind(&PathPlanNode::location_change_cb, this, std::placeholders::_1))),
 							   avoidance_zone_flag_sub(this->create_subscription<std_msgs::msg::Bool>("avoid_zone", 1, std::bind(&PathPlanNode::avoid_zone_flag_change_cb, this, std::placeholders::_1))),
+							   end_proc_sub(this->create_subscription<std_msgs::msg::Bool>("end_process", 1, std::bind(&PathPlanNode::end_process_cb, this, std::placeholders::_1))),
 							   path_pub(this->create_publisher<nav_msgs::msg::Path>("/pathplan/nav_path", 1)),
 							   weight_map_pub(this->create_publisher<nav_msgs::msg::OccupancyGrid>("/pathplan/nav_map", 1)),
 							//    raycast_pub(this->create_publisher<nav_msgs::msg::Path>("/ray_path", 1)),
@@ -275,6 +276,14 @@ void PathPlanNode::export_raycast(std::shared_ptr<custom_types::srv::GetDistToOb
             RCLCPP_INFO(this->get_logger(), "Yaw: %f\nDistance to obstacle: %f", yaw, distance_to_obstacle);
 
 			response->return_value = distance_to_obstacle;
+}
+
+void PathPlanNode::end_process_cb(const std_msgs::msg::Bool &end){
+	if(end.data == true){
+		RCLCPP_INFO(this->get_logger(),
+			"Path Plan Node Exited Successfully.");
+		std::exit(0);
+	}
 }
 
 bool PathPlanNode::config_node()
