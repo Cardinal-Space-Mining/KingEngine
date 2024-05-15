@@ -18,6 +18,7 @@
   <depend>traversal</depend>
   <depend>sick_perception</depend>
   <depend>video_publisher</depend>
+  <depend>std_msgs</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
