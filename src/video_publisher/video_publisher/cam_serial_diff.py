@@ -13,6 +13,28 @@ class CameraInfo:
     def __str__(self) -> str:
         return f"{{camera_name: {self.camera_name}, video_stream: {self.video_stream}, serial_number: {self.serial_number}}}"
 
+def get_camera_info(self):
+        endpoints = subprocess.run(("v4l2-ctl", "--list-devices"), capture_output=True).stdout.decode().splitlines()
+        cameras = []
+        for line in endpoints:
+            if line != '' and line[0] == '\t':
+                cameras.append(line.replace('\t', ''))
+
+        cams = []
+        for camera in cameras:
+            lines = subprocess.run(("v4l2-ctl", "-d", camera, "--info"), capture_output=True).stdout.decode().splitlines()
+            name = None
+            serial = None
+            for line in lines:
+                if name is not None and serial is not None:
+                    break
+                if 'Serial' in line:
+                    _, serial = line.replace('\t', '').replace(' ', '').split(':')
+                if 'Name' in line:
+                    _, name = line.replace('\t', '').replace(' ', '').split(':')
+            cams.append()
+        return tuple(cams)
+
 def get_video_info(name: str) -> any:
     string = subprocess.run(["udevadm", "info", "--query=all", "--name=*".replace("*", name)], capture_output=True).stdout.decode()
     # print(string)

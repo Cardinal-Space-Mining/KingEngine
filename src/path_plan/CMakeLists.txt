@@ -13,6 +13,7 @@ find_package(rclcpp REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(custom_types REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -26,7 +27,7 @@ else()
 endif()
 
 add_executable(nav_node src/main.cpp src/path_plan/pathplan.cpp)
-ament_target_dependencies(nav_node rclcpp nav_msgs geometry_msgs std_msgs)
+ament_target_dependencies(nav_node rclcpp nav_msgs geometry_msgs std_msgs custom_types)
 
 if(OpenCV_FOUND)
   target_link_libraries(nav_node ${OpenCV_LIBS})

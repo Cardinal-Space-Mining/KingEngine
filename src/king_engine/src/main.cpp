@@ -12,6 +12,7 @@
 // #include "custom_types/msg/location.hpp"
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <std_msgs/msg/bool.hpp>
 
 #include "custom_types/srv/start_mining.hpp"
 #include "custom_types/srv/stop_mining.hpp"
@@ -48,6 +49,17 @@ const BoundingBox KSC_LBERM_ZONE(berm_x - 1.1, berm_y + 0.45, berm_x + 1.1, berm
 const BoundingBox KSC_SBERM_ZONE(berm_x - 1, berm_y + 0.35, berm_x + 1, berm_y - 0.35);
 
 const double MINING_TIME = 5.0;
+
+template <typename T>
+void ke_wait_for_service(T& client){
+	while (!client->wait_for_service(1s)) {
+		if (!rclcpp::ok()) {
+		RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+		std::exit(EXIT_FAILURE);
+    }
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+  }
+}
 
 
 class KingEngineNode : public rclcpp::Node
@@ -121,12 +133,17 @@ private:
 public:
 	KingEngineNode() : Node("king_engine")
 	{
-		this->location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("location", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
-		this->destination_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("destination", 10);
+		this->location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
+		this->destination_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/target_pose", 10);
 		// path_pub = this->create_publisher<nav_msgs::msg::Path>("path", 10);
-		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("");
-		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("");
-		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("");
+		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("/start_mining");
+		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("/stop_mining");
+		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
+		this->end_proc_pub = this->create_publisher<std_msgs::msg::Bool>("end_process", 10);
+
+		ke_wait_for_service<decltype(start_mining_service)>(start_mining_service);
+		ke_wait_for_service<decltype(stop_mining_service)>(stop_mining_service);
+		ke_wait_for_service<decltype(start_offload_service)>(start_offload_service);
 
     	// TODO if this is to find the total area there is a variable for that now.
 		// this->combine_keypoints(
@@ -143,21 +160,7 @@ public:
 			this->publish_destination();
 		}
 	}
-
-
-// SEARCHING_FOR_GOLD FLOWPLAN:
-// (x, y, yaw, SEARCHING_FOR_GOLD)
-//
-// while not at (x,y):
-//   move towards (x, y)
-//   if (comfortably) in mining zone:
-//     ray_dist = shoot_raycast_forward()
-//     if ray_dist >= TARGET_MINING_LENGTH:
-//       break out, finished with search
-//   // we will continue moving toward (x, y) at slightly different pose, try again
-
-
-    void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
+	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
 	{
 		if (this->objective_idx >= this->objectives.size()) {
 			// We have finished all scheduled objectives, we don't have to do anything else
@@ -220,6 +223,13 @@ public:
 				case OpMode::FINISHED: {
 					// send command to disable robot? (or do an emote/hit the griddy)?
 					// falls through to return
+					std_msgs::msg::Bool end_all_processes;
+
+					end_all_processes.data = true;
+
+					this->end_proc_pub->publish(end_all_processes);
+					std::exit(0);
+
 					return;
 				}
 				default: {
@@ -257,6 +267,7 @@ protected:
 	rclcpp::Client<custom_types::srv::StartMining>::SharedPtr start_mining_service;
 	rclcpp::Client<custom_types::srv::StopMining>::SharedPtr stop_mining_service;
 	rclcpp::Client<custom_types::srv::StartOffload>::SharedPtr start_offload_service;
+	rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr end_proc_pub;
 
 	std::tuple<double, double, double, OpMode> test = std::make_tuple(50.0, 50.0, 0.0, (OpMode) 1);
 
