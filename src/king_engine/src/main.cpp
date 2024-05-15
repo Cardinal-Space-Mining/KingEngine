@@ -50,8 +50,8 @@ class BoundingBox {
 // const BoundingBox UCFB_SBERM_ZONE(6.19,3.92,7.49,3.22);
 
 // TODO set x and y to actual coordinates
-const double berm_x = 3.74;
-const double berm_y = 0.65;
+const double berm_x = 5.38;
+const double berm_y = 0.6;
 // (tlx, tly, brx, bry)
 const BoundingBox KSC_ARENA_ZONE(0,5,6.88,0);
 const BoundingBox KSC_OBS_ZONE(0,5,3.88,0);
