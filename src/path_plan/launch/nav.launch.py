@@ -15,7 +15,7 @@ def generate_launch_description():
 		description = 'Input obstacle grid topic name'
 	)
 
-	pose_topic_cfg = LaunchConfiguration('pose_topic', default = '/dlo/odom_node/pose')
+	pose_topic_cfg = LaunchConfiguration('pose_topic', default = 'adjusted_pose')
 	# pose_topic_cfg = LaunchConfiguration('pose_topic', default = '/uesim/pose')
 	declare_pose_topic_arg = DeclareLaunchArgument(
 		'pose_topic',
@@ -23,7 +23,7 @@ def generate_launch_description():
 		description = 'Input current pose topic name'
 	)
 
-	destination_topic_cfg = LaunchConfiguration('destination_topic', default = '/king_engine/destination')
+	destination_topic_cfg = LaunchConfiguration('destination_topic', default = 'target_pose')
 	declare_destination_topic_arg = DeclareLaunchArgument(
 		'destination_topic',
 		default_value = destination_topic_cfg,
@@ -40,8 +40,8 @@ def generate_launch_description():
 		parameters = [params_yaml_path],
 		remappings = [
 			('obstacle_grid', obstacles_topic_cfg),
-			('current_pose', pose_topic_cfg),
-			('destination_topic_cfg', destination_topic_cfg)
+			('adjusted_pose', pose_topic_cfg),
+			('target_pose', destination_topic_cfg)
 		]
 	)
 
