@@ -34,20 +34,6 @@ class BoundingBox {
 	double tlx, tly, brx, bry;
 };
 
-// const BoundingBox UCFT_ARENA_ZONE(0,8.14,4.57,0);
-// const BoundingBox UCFT_OBS_ZONE(0,4.07,4.57,0);
-// const BoundingBox UCFT_EXC_ZONE(0,8.14,4.57,4.07);
-// const BoundingBox UCFT_CON_ZONE(2.57,8.14,4.57,5.54);
-// const BoundingBox UCFT_LBERM_ZONE(3.12,7.59,4.02,6.09);
-// const BoundingBox UCFT_SBERM_ZONE(3.22,7.49,3.92,6.19);
-
-// const BoundingBox UCFB_ARENA_ZONE(0,4.57,8.14,0);
-// const BoundingBox UCFB_OBS_ZONE(0,4.57,4.07,0);
-// const BoundingBox UCFB_EXC_ZONE(4.07,4.57,8.14,0);
-// const BoundingBox UCFB_CON_ZONE(5.54,4.57,8.14,2.57);
-// const BoundingBox UCFB_LBERM_ZONE(6.09,4.02,7.59,3.12);
-// const BoundingBox UCFB_SBERM_ZONE(6.19,3.92,7.49,3.22);
-
 // TODO set x and y to actual coordinates
 const double berm_x = 3.74;
 const double berm_y = 0.65;
@@ -69,7 +55,9 @@ public:
 		FINISHED = 0,
 		TRAVERSAL = 1,
 		MINING = 2,
-		OFFLOAD = 3
+		OFFLOAD = 3,
+		// Find safe mining zone
+		SEARCH_FOR_GOLD = 4
 	};
 	using ObjectiveNode = std::tuple<double, double, double, OpMode>;	// x, y , theta, operation mode
 
@@ -145,16 +133,17 @@ public:
 		// 	get_objectives_from_bounding_box(UCFT_LBERM_ZONE, 5, 3, 90, OpMode::OFFLOAD)
 		// );
 
-		// Move to coord in con zone
-		this->objectives.emplace_back(ObjectiveNode{4.2,1.6,90,OpMode::TRAVERSAL});
-		// TODO what happens when there is obs in way
-		// Move to exc zone border
-		this->objectives.emplace_back(ObjectiveNode{4.2,2,90,OpMode::TRAVERSAL});
-		// Mine to distance
-		this->objectives.emplace_back(ObjectiveNode{4.2,2.5,90,OpMode::MINING});
-		// Move to berm
-		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::OFFLOAD});
-		this->objectives.emplace_back(ObjectiveNode{0,0,90,OpMode::FINISHED});
+		// Move to back coord in exc zone
+		// Call SEARCH_FOR_GOLD which is traversal but checks if is in exc zone
+		// 		If in exc zone mining mode
+		//		else continue traversing
+		// TRAVERSAL to berm
+		// OFFLOAD
+		this->objectives.emplace_back(ObjectiveNode{6.38,4.5,45,OpMode::SEARCH_FOR_GOLD});
+		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::MINING});
+		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::TRAVERSAL});
+		this->objectives.emplace_back(ObjectiveNode{-1,-1,90,OpMode::OFFLOAD});
+		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::FINISHED});
 		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL) {
 			this->publish_destination();
 		}
