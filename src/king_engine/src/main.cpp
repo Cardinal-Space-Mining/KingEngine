@@ -22,7 +22,7 @@
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-static constexpr double PI{ atan(1) * 4 };
+static const double PI{ atan(1) * 4 };
 
 class BoundingBox {
 	public:
