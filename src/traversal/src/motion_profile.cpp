@@ -261,8 +261,7 @@ double profile::normalizeCurrent(double current) {
     if (normal < 0) {
         normal += 360;
     }
-
-    return current;
+    return normal;
 }
 
 void profile::pointTurn()
