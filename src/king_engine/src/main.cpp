@@ -17,6 +17,7 @@
 #include "custom_types/srv/start_mining.hpp"
 #include "custom_types/srv/stop_mining.hpp"
 #include "custom_types/srv/start_offload.hpp"
+#include "custom_types/srv/get_dist_to_obs.hpp"
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
@@ -49,6 +50,7 @@ const BoundingBox KSC_LBERM_ZONE(berm_x - 1.1, berm_y + 0.45, berm_x + 1.1, berm
 const BoundingBox KSC_SBERM_ZONE(berm_x - 1, berm_y + 0.35, berm_x + 1, berm_y - 0.35);
 
 const double MINING_TIME = 5.0;
+const double SAFE_MINING_DIST = 0.25;
 
 template <typename T>
 void ke_wait_for_service(T& client){
@@ -111,7 +113,8 @@ public:
 		// path_pub = this->create_publisher<nav_msgs::msg::Path>("path", 10);
 		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("/start_mining");
 		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("/stop_mining");
-		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
+        this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
+        this->obstacle_distance_service = this->create_client<custom_types::srv::GetDistToObs>("/obstacle_distance");
 		this->end_proc_pub = this->create_publisher<std_msgs::msg::Bool>("end_process", 10);
 
 		ke_wait_for_service<decltype(start_mining_service)>(start_mining_service);
@@ -156,14 +159,17 @@ public:
 				case OpMode::SEARCH_FOR_GOLD: {
 					if ((msg.pose.position.x > (KSC_EXC_ZONE.tlx + 0.6)) && 
 					(msg.pose.position.y > (KSC_EXC_ZONE.bry + 0.6))) {
-						this->objective_idx++;
-						current_objective = std::get<3>(this->objectives[this->objective_idx]);
-						// initializations for the next stage occur after this switch case, so break
-						break;
+                        auto request = std::make_shared<custom_types::srv::GetDistToObs::Request>();
+                        auto response = this->obstacle_distance_service->async_send_request(request);
+                        rclcpp::spin_until_future_complete(this->shared_from_this(), response);
+                        if (response.get()->return_value >= SAFE_MINING_DIST) {
+                            this->objective_idx++;
+                            current_objective = std::get<3>(this->objectives[this->objective_idx]);
+                            // initializations for the next stage occur after this switch case, so break
+                            break;
+                        }
 					}
-					else {
-						return;
-					}
+                    return;
 				}
 				case OpMode::MINING: {		// the mining service gets started
                     rclcpp::Time current_time = this->get_clock()->now();
@@ -240,6 +246,7 @@ protected:
 	rclcpp::Client<custom_types::srv::StartMining>::SharedPtr start_mining_service;
 	rclcpp::Client<custom_types::srv::StopMining>::SharedPtr stop_mining_service;
 	rclcpp::Client<custom_types::srv::StartOffload>::SharedPtr start_offload_service;
+    rclcpp::Client<custom_types::srv::GetDistToObs>::SharedPtr obstacle_distance_service;
 	rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr end_proc_pub;
 
 	std::tuple<double, double, double, OpMode> test = std::make_tuple(50.0, 50.0, 0.0, (OpMode) 1);
