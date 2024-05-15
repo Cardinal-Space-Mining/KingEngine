@@ -3,7 +3,7 @@
 	url = https://github.com/Cardinal-Space-Mining/direct_lidar_inertial_odometry.git
 	branch = filtered_points
 [submodule "src/rio_interface/PiSerialControl"]
-	path = src/rio_interface/PiSerialControl
+	path = src/rio_interface/rio_interface/PiSerialControl
 	url = https://github.com/Cardinal-Space-Mining/PiSerialControl.git
 	branch = main
 [submodule "src/Sick-Perception"]
