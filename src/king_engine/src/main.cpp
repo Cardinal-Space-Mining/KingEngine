@@ -61,6 +61,17 @@ const BoundingBox KSC_CON_ZONE(3.88,2,6.88,0);
 const BoundingBox KSC_LBERM_ZONE(berm_x - 1.1, berm_y + 0.45, berm_x + 1.1, berm_y - 0.45);
 const BoundingBox KSC_SBERM_ZONE(berm_x - 1, berm_y + 0.35, berm_x + 1, berm_y - 0.35);
 
+template <typename T>
+void ke_wait_for_service(T& client){
+	while (!client->wait_for_service(1s)) {
+		if (!rclcpp::ok()) {
+		RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
+		std::exit(EXIT_FAILURE);
+    }
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
+  }
+}
+
 
 class KingEngineNode : public rclcpp::Node
 {
@@ -108,7 +119,7 @@ private:
 		assert(mining.size() == offload.size());
 		for (size_t i = 0; i < mining.size(); i++) {
 			this->objectives.emplace_back(mining[i]);
-			this->objectives.emplace_back(offloa;d[i]);
+			this->objectives.emplace_back(offload[i]);
 		}
 	}
 
@@ -132,12 +143,16 @@ private:
 public:
 	KingEngineNode() : Node("king_engine")
 	{
-		this->location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("location", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
-		this->destination_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("destination", 10);
+		this->location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
+		this->destination_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/target_pose", 10);
 		// path_pub = this->create_publisher<nav_msgs::msg::Path>("path", 10);
-		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("");
-		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("");
-		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("");
+		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("/start_mining");
+		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("/stop_mining");
+		this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
+
+		ke_wait_for_service<decltype(start_mining_service)>(start_mining_service);
+		ke_wait_for_service<decltype(stop_mining_service)>(stop_mining_service);
+		ke_wait_for_service<decltype(start_offload_service)>(start_offload_service);
 
     	// TODO if this is to find the total area there is a variable for that now.
 		// this->combine_keypoints(
@@ -158,6 +173,8 @@ public:
 		if(this->objectives.size() > 0 && std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL) {
 			this->publish_destination();
 		}
+
+		RCLCPP_INFO(this->get_logger(), "king_engine node loaded");
 	}
 	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
 	{

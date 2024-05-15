@@ -114,5 +114,6 @@ def generate_launch_description():
         tf2_map_node,
         tf2_odom_node,
         traversal_node,
+        rio_interface_node
         # video_publisher_node
     ])

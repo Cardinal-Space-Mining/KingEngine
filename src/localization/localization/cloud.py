@@ -21,7 +21,7 @@ class CloudSub(Node):
 
     def cloud_callback(self, msg):
         points = rnp.numpify(msg)
-        points['xyz'] = points['xyz'] @ self.r
+        points['xyz'] = (points['xyz'] @ self.r) + np.array([0, 0, .54])
         removable_points = []
         for i in range(len(points['xyz'])):
             if points['xyz'][i, 0] > -1 \
