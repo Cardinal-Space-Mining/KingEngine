@@ -67,6 +67,8 @@ const std::string PathPlanNode::OUTPUT_FRAME_PARAM_NAME = "output_frame";
 const std::string PathPlanNode::AVOID_ZONE_X_PARAM_NAME = "avoidance_zone_corner_x";
 const std::string PathPlanNode::AVOID_ZONE_Y_PARAM_NAME = "avoidance_zone_corner_y";
 const std::string PathPlanNode::AVOID_ZONE_THICKNESS_PARAM_NAME = "avoidance_zone_barrier_thickness";
+const std::string PathPlanNode::ARENA_WIDTH_PARAM_NAME = "arena_width";
+const std::string PathPlanNode::ARENA_HEIGHT_PARAM_NAME = "arena_height";
 
 PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   node_init(this->config_node()),
@@ -83,6 +85,8 @@ PathPlanNode::PathPlanNode() : Node("path_plan"),
 							   avoidance_barrier_x(this->get_parameter(AVOID_ZONE_X_PARAM_NAME).as_double()),
 							   avoidance_barrier_y(this->get_parameter(AVOID_ZONE_Y_PARAM_NAME).as_double()),
 							   avoidance_barrier_thickness(this->get_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME).as_int()),
+                               arena_width(this->get_parameter(ARENA_WIDTH_PARAM_NAME).as_double()),
+                               arena_height(this->get_parameter(ARENA_HEIGHT_PARAM_NAME).as_double()),
 							   output_frame_id(this->get_parameter(OUTPUT_FRAME_PARAM_NAME).as_string()),
 							   periodic_publisher(this->create_wall_timer(this->get_parameter(UPDATE_TIME_PARAM_NAME).as_double() * 1000ms, std::bind(&PathPlanNode::export_data, this)))
 
@@ -93,76 +97,121 @@ PathPlanNode::PathPlanNode() : Node("path_plan"),
 #ifdef PRINT_PARAMS_ON_STARTUP
     RCLCPP_INFO(this->get_logger(), "CONFIG PARAMETERS:\n"
                                     "robot_width: %f\nturn_cost: %d\nmin_weight: %d\n"
-                                    "avoidance zones:\n\tcorner_x: %f\n\tcorner_y: %f\n\tbarrier_thickness: %d",
+                                    "avoidance zones:\n\tcorner_x: %f\n\tcorner_y: %f\n\tbarrier_thickness: %d\n"
+                                    "arena_width: %f\narena_height: %f",
                                     robot_width, turn_cost, min_weight,
                                     avoidance_barrier_x, avoidance_barrier_y,
-									avoidance_barrier_thickness);
+									avoidance_barrier_thickness,
+                                    arena_width, arena_height);
 #endif
+
+    // Constant data for the published map
+    this->weights.header.frame_id = this->output_frame_id;
+    this->weights.info.origin.position.x = 0.0;
+    this->weights.info.origin.position.y = 0.0;
+    this->weights.info.origin.position.z = 0.0;
+    this->weights.info.origin.orientation.x = 0.0;
+    this->weights.info.origin.orientation.y = 0.0;
+    this->weights.info.origin.orientation.z = 0.0;
+    this->weights.info.origin.orientation.w = 1.0;
 
 	// this->target_pose.position.x = 11.5;
 	// this->target_pose.position.y = -4.2;
 }
 
-void PathPlanNode::lidar_change_cb(const nav_msgs::msg::OccupancyGrid &map)
+cv::Mat PathPlanNode::crop_to_arena_size(
+        const cv::Mat data,
+        const int map_w, const int map_h,
+        const int arena_min_x, const int arena_min_y,
+        const int arena_w, const int arena_h)
 {
-	// RCLCPP_INFO(this->get_logger(), "Recieved lidar data");
+    // Pad the data to guarantee the map contains the entire arena (filling unknown spots with 0)
 
-	this->weights = map; // copy occupancy grid directly since we can simply replace our old data
+    cv::Mat padded_data = cv::Mat::zeros(cv::Size{map_w + arena_w*2, map_h + arena_h*2}, CV_8UC1);
+    cv::Rect centered_rect{arena_w, arena_h, map_w, map_h};
+    data.copyTo(padded_data(centered_rect));
 
-	std::chrono::high_resolution_clock::time_point _t = std::chrono::high_resolution_clock::now();
+    // Crop the padded data down to the rectangle of the arena
+    cv::Mat arena_mat = cv::Mat::zeros(cv::Size{arena_w, arena_h}, CV_8UC1);
 
-	const int
-		_w = static_cast<int>(this->weights.info.width),
-		_h = static_cast<int>(this->weights.info.height);
+    // Account for translation from padding with the corner coords
+    cv::Rect crop_rect{arena_min_x+arena_w, arena_min_y+arena_h, arena_w, arena_h};
 
-	cv::Mat _data{_h, _w, CV_8UC1, this->weights.data.data()};
-	cv::Mat _dest = cv::Mat::zeros(cv::Size{_w, _h}, CV_8UC1);
+    (padded_data(crop_rect)).copyTo(arena_mat);
+
+    return arena_mat;
+}
+
+void PathPlanNode::globulize() {
+    std::chrono::high_resolution_clock::time_point _t = std::chrono::high_resolution_clock::now();
 
     const float
-        resolution = this->weights.info.resolution;
-	const int
-		kernel_diam = static_cast<int>(this->robot_width / resolution) + 1; // actual computation requires half of robot width / res * 2 for diam, but the 0.5 and 2 cancel
-	const cv::Size
-		kernel_size{kernel_diam, kernel_diam};
+        resolution = input_weights.info.resolution;
+    const int
+            map_w = static_cast<int>(input_weights.info.width),
+            map_h = static_cast<int>(input_weights.info.height),
+            arena_w = static_cast<int>(arena_width/resolution),
+            arena_h = static_cast<int>(arena_height/resolution),
+            map_offset_x = static_cast<int>(input_weights.info.origin.position.x / resolution),
+            map_offset_y = static_cast<int>(input_weights.info.origin.position.y / resolution);
 
-	if (include_avoidance_zone) {
-		// Draws a vertical line that divides the navigation zone and offload zone
-		// defined by the top left corner of offload zone directly downwards to the bottom of the arena
-		// int x = (int)(this->avoidance_barrier_x*resolution);
-		// int y = (int)(this->avoidance_barrier_y*resolution);
-		// while(y < _h) {
-		//     _data.at<uint8_t>(x, y) = 255;
-		//     y++;
-		// }
-		cv::line(
-			_data,
-			cv::Point(this->avoidance_barrier_x*resolution, this->avoidance_barrier_y*resolution), // top left of avoidance zone
-			cv::Point(this->avoidance_barrier_x*resolution, _h - 1), // bottom left of avoidance zone
-			cv::Scalar(255),
-			this->avoidance_barrier_thickness,
-			cv::LINE_8);
-	}
+    cv::Mat _data{map_h, map_w, CV_8UC1, input_weights.data.data()};
+    cv::Mat _dest = cv::Mat::zeros(cv::Size{map_w, map_h}, CV_8UC1);
 
-	cv::dilate(
-		_data,
-		_dest,
-		cv::getStructuringElement(cv::MORPH_ELLIPSE, kernel_size));
-	cv::GaussianBlur(
-		_dest,
-		_data,
-		kernel_size,
-		10, 10,
-		cv::BorderTypes::BORDER_CONSTANT);
-	cv::max(
-		_data,
-		cv::Scalar::all(this->min_weight),
-		_data);
+    cv::Mat arena_weights =
+            this->crop_to_arena_size(_data,
+                                     map_w, map_h,
+                                     -map_offset_x, -map_offset_y,
+                                     arena_w, arena_h);
 
-	RCLCPP_INFO(this->get_logger(),
-				"Weightmap globulization operation completed in %f seconds.",
-				std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - _t).count());
+    if (include_avoidance_zone) {
+        cv::line(
+                _data,
+                cv::Point(this->avoidance_barrier_x/resolution, this->avoidance_barrier_y/resolution), // top left of avoidance zone
+                cv::Point(this->avoidance_barrier_x/resolution, arena_h - 1), // bottom left of avoidance zone
+                cv::Scalar(255),
+                this->avoidance_barrier_thickness,
+                cv::LINE_8);
+    }
 
-	this->new_map_data = true;
+    const int
+            kernel_diam = static_cast<int>(this->robot_width / resolution) + 1; // actual computation requires half of robot width / res * 2 for diam, but the 0.5 and 2 cancel
+    const cv::Size
+            kernel_size{kernel_diam, kernel_diam};
+
+    cv::dilate(
+            arena_weights,
+            _dest,
+            cv::getStructuringElement(cv::MORPH_ELLIPSE, kernel_size));
+    cv::GaussianBlur(
+            _dest,
+            arena_weights,
+            kernel_size,
+            10, 10,
+            cv::BorderTypes::BORDER_CONSTANT);
+    cv::max(
+            arena_weights,
+            cv::Scalar::all(this->min_weight),
+            arena_weights);
+
+    RCLCPP_INFO(this->get_logger(),
+                "Weightmap globulization operation completed in %f seconds.",
+                std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - _t).count());
+
+    this->weights.header.stamp = this->get_clock()->now();
+    this->weights.info.map_load_time = this->get_clock()->now();
+    this->weights.info.resolution = input_weights.info.resolution;
+    this->weights.info.width = arena_w;
+    this->weights.info.height = arena_h;
+    this->weights.data.clear();
+    this->weights.data.resize(arena_w*arena_h);
+    std::copy(arena_weights.begin<uint8_t>(), arena_weights.end<uint8_t>(), this->weights.data.begin());
+}
+
+void PathPlanNode::lidar_change_cb(const nav_msgs::msg::OccupancyGrid &_map)
+{
+    this->input_weights = _map;
+    this->new_map_data = true;
 }
 
 void PathPlanNode::location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
@@ -173,7 +222,6 @@ void PathPlanNode::location_change_cb(const geometry_msgs::msg::PoseStamped &msg
 void PathPlanNode::destination_change_cb(const geometry_msgs::msg::PoseStamped &msg)
 {
 	this->target_pose = msg.pose;
-
 	this->new_dst = true;
 }
 
@@ -183,6 +231,12 @@ void PathPlanNode::avoid_zone_flag_change_cb(const std_msgs::msg::Bool &flag) {
 
 void PathPlanNode::export_data()
 {
+    if (new_map_data)
+    {
+        globulize();
+        this->weight_map_pub->publish(this->weights);
+    }
+
 	if (new_dst || new_map_data)
 	{
 		nav_msgs::msg::Path ros_path{};
@@ -281,12 +335,6 @@ void PathPlanNode::export_data()
 
             this->raycast_pub->publish(ray_path);
         }
-
-	}
-
-	if (new_map_data)
-	{
-		this->weight_map_pub->publish(this->weights);
 	}
 
     new_map_data = false;
@@ -301,7 +349,9 @@ bool PathPlanNode::config_node()
     this->declare_parameter(UPDATE_TIME_PARAM_NAME, DEFAULT_UPDATE_TIME_S);
     this->declare_parameter(AVOID_ZONE_X_PARAM_NAME, DEFAULT_AVOIDANCE_CORNER_X);
     this->declare_parameter(AVOID_ZONE_Y_PARAM_NAME, DEFAULT_AVOIDANCE_CORNER_Y);
-	this->declare_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME, DEFAULT_AVOIDANCE_THICKNESS);
+    this->declare_parameter(AVOID_ZONE_THICKNESS_PARAM_NAME, DEFAULT_AVOIDANCE_THICKNESS);
+    this->declare_parameter(ARENA_WIDTH_PARAM_NAME, DEFAULT_ARENA_WIDTH);
+    this->declare_parameter(ARENA_HEIGHT_PARAM_NAME, DEFAULT_ARENA_HEIGHT);
 	this->declare_parameter(OUTPUT_FRAME_PARAM_NAME, DEFAULT_OUTPUT_FRAME_ID);
 	return true;
 }
