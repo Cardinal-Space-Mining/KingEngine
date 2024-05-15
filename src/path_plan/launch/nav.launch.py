@@ -40,7 +40,7 @@ def generate_launch_description():
 		parameters = [params_yaml_path],
 		remappings = [
 			('obstacle_grid', obstacles_topic_cfg),
-			('current_pose', pose_topic_cfg),
+			('adjusted_pose', pose_topic_cfg),
 			('target_pose', destination_topic_cfg)
 		]
 	)
