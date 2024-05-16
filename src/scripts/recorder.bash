@@ -3,8 +3,5 @@
 # Specify the topics you want to record
 TOPICS="/cloud_all_fields_fullframe /filtered_imu /filtered_cloud /ImageRight /ImageLeft /ImageCenter"
 
-# Specify the filename for the bag file
-BAG_FILE="my_bagfile"
-
-# Record messages
-ros2 bag record -o $BAG_FILE $TOPICS
+# Record all specified topics, split into seperate files every 300 seconds, compress files
+ros2 bag record $TOPICS -d 60 --compression-mode file --compression-format zstd
