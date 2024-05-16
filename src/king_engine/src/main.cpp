@@ -121,7 +121,7 @@ public:
 
 		this->objectives.emplace_back(ObjectiveNode{6.38,4.5,45,OpMode::SEARCH_FOR_GOLD});
 		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::MINING});
-		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::TRAVERSAL});
+		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y+0.45,90,OpMode::TRAVERSAL});
 		this->objectives.emplace_back(ObjectiveNode{-1,-1,90,OpMode::OFFLOAD});
 		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::FINISHED});
 		if(this->objectives.size() > 0 && (std::get<3>(this->objectives[0]) == OpMode::TRAVERSAL || std::get<3>(this->objectives[0]) == OpMode::SEARCH_FOR_GOLD)) {
