@@ -79,10 +79,10 @@ private:
 			// yaw = atan2(2.0 * (q.w*q.x + q.y*q.z), (q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z)) * (180.0 / PI);	// yaw rotation in degrees
 		const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
 		const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-		const double yaw = std::atan2(siny_cosp, cosy_cosp) * (180.0 / PI);
-		yaw %= 360;
-		if (yaw < 0) {
-			yaw += 360;
+		double yaw = std::atan2(siny_cosp, cosy_cosp) * (180.0 / PI);
+		yaw = fmod(yaw, 360.0);
+		if (yaw < 0.0) {
+			yaw += 360.0;
 		}
 		return (
 			std::abs(pose.position.x - std::get<0>(target)) < trav_epsilon_m &&
@@ -191,6 +191,7 @@ public:
 						current_objective = std::get<3>(this->objectives[this->objective_idx]);
 						break;
 					}
+                    return;
 				}
 				case OpMode::FINISHED: {
 					// send command to disable robot? (or do an emote/hit the griddy)?
