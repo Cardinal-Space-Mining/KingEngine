@@ -53,8 +53,6 @@
 
 #define avoidance_zone_p1 cv::Point()
 
-
-
 using namespace std::literals::chrono_literals;
 
 const std::string PathPlanNode::DEFAULT_OUTPUT_FRAME_ID = "world";

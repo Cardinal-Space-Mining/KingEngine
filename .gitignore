@@ -32,6 +32,7 @@
 *.app
 .vscode/c_cpp_properties.json
 .vscode/settings.json
+.vscode/launch.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

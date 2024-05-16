@@ -8,8 +8,9 @@
 #include <utility>
 #include <vector>
 
-#include "rclcpp/rclcpp.hpp"
+
 // #include "custom_types/msg/location.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <std_msgs/msg/bool.hpp>
@@ -26,34 +27,31 @@ static const double PI{ atan(1) * 4 };
 
 class BoundingBox {
 	public:
-	// if corners, mining zone, else berm zone
 	BoundingBox(double _x1, double _y1, double _x2, double _y2) {
-    tlx = _x1;
-    tly = _y1;
-    brx = _x2;
-    bry = _y2;
+    left = _x1;
+    top = _y1;
+    right = _x2;
+    bottom = _y2;
 	}
-	double tlx, tly, brx, bry;
+	double left, top, right, bottom;
 };
 
-// TODO set x and y to actual coordinates
 const double berm_x = 5.38;
 const double berm_y = 0.6;
-// (tlx, tly, brx, bry)
+// (left, top, right, bottom)
 const BoundingBox KSC_ARENA_ZONE(0,5,6.88,0);
 const BoundingBox KSC_OBS_ZONE(0,5,3.88,0);
 const BoundingBox KSC_EXC_ZONE(3.88,5,6.88,0);
 const BoundingBox KSC_CON_ZONE(3.88,2,6.88,0);
-// const BoundingBox KSC_LBERM_ZONE(4.38,1.1,6.58,0.2);
-// const BoundingBox KSC_SBERM_ZONE(4.48,1.0,6.48,0.3);
 const BoundingBox KSC_LBERM_ZONE(berm_x - 1.1, berm_y + 0.45, berm_x + 1.1, berm_y - 0.45);
 const BoundingBox KSC_SBERM_ZONE(berm_x - 1, berm_y + 0.35, berm_x + 1, berm_y - 0.35);
 
-const double MINING_TIME = 5.0;
+const double MINING_TIME = 15.0;
+const double OFFLOAD_TIME = 10.0;
 const double SAFE_MINING_DIST = 0.25;
 
 template <typename T>
-void ke_wait_for_service(T& client){
+void ke_wait_for_service(T& client) {
 	while (!client->wait_for_service(1s)) {
 		if (!rclcpp::ok()) {
 		RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
@@ -63,9 +61,7 @@ void ke_wait_for_service(T& client){
   }
 }
 
-
-class KingEngineNode : public rclcpp::Node
-{
+class KingEngineNode : public rclcpp::Node {
 public:
 	enum class OpMode {
 		FINISHED = 0,
@@ -79,8 +75,15 @@ public:
 private:
 	static bool pose_inrange(const geometry_msgs::msg::Pose& pose, const ObjectiveNode& target, double trav_epsilon_m = 3e-2, double heading_epsilon_deg = 2.0) {
 		const geometry_msgs::msg::Quaternion& q = pose.orientation;
-		const double
-			yaw = atan2(2.0 * (q.w*q.x + q.y*q.z), (q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z)) * (180.0 / PI);	// yaw rotation in degrees
+		// const double
+			// yaw = atan2(2.0 * (q.w*q.x + q.y*q.z), (q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z)) * (180.0 / PI);	// yaw rotation in degrees
+		const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
+		const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+		double yaw = std::atan2(siny_cosp, cosy_cosp) * (180.0 / PI);
+		yaw = fmod(yaw, 360.0);
+		if (yaw < 0.0) {
+			yaw += 360.0;
+		}
 		return (
 			std::abs(pose.position.x - std::get<0>(target)) < trav_epsilon_m &&
 			std::abs(pose.position.y - std::get<1>(target)) < trav_epsilon_m &&
@@ -90,7 +93,6 @@ private:
 
 	void publish_destination() {
 		geometry_msgs::msg::PoseStamped target;
-
 		target.header.frame_id = "world";
 		target.header.stamp = this->get_clock()->now();
 		target.pose.position.x = std::get<0>(this->objectives[this->objective_idx]);
@@ -100,17 +102,13 @@ private:
 		target.pose.orientation.x = 0.0;
 		target.pose.orientation.y = 0.0;
 		target.pose.orientation.z = sin(std::get<2>(this->objectives[this->objective_idx]) * 0.5);
-
 		this->destination_pub->publish(target);
 	}
 
-
 public:
-	KingEngineNode() : Node("king_engine")
-	{
+	KingEngineNode() : Node("king_engine") {
 		this->location_sub = this->create_subscription<geometry_msgs::msg::PoseStamped>("/adjusted_pose", 10, std::bind(&KingEngineNode::location_change_cb, this, _1));
 		this->destination_pub = this->create_publisher<geometry_msgs::msg::PoseStamped>("/target_pose", 10);
-		// path_pub = this->create_publisher<nav_msgs::msg::Path>("path", 10);
 		this->start_mining_service = this->create_client<custom_types::srv::StartMining>("/start_mining");
 		this->stop_mining_service = this->create_client<custom_types::srv::StopMining>("/stop_mining");
         this->start_offload_service = this->create_client<custom_types::srv::StartOffload>("/start_offload");
@@ -121,12 +119,6 @@ public:
 		ke_wait_for_service<decltype(stop_mining_service)>(stop_mining_service);
 		ke_wait_for_service<decltype(start_offload_service)>(start_offload_service);
 
-    	// TODO if this is to find the total area there is a variable for that now.
-		// this->combine_keypoints(
-		// 	get_objectives_from_bounding_box(UCFT_EXC_ZONE, 5, 3, 90, OpMode::MINING),
-		// 	get_objectives_from_bounding_box(UCFT_LBERM_ZONE, 5, 3, 90, OpMode::OFFLOAD)
-		// );
-
 		this->objectives.emplace_back(ObjectiveNode{6.38,4.5,45,OpMode::SEARCH_FOR_GOLD});
 		this->objectives.emplace_back(ObjectiveNode{-1,-1,-1,OpMode::MINING});
 		this->objectives.emplace_back(ObjectiveNode{berm_x,berm_y,90,OpMode::TRAVERSAL});
@@ -136,8 +128,7 @@ public:
 			this->publish_destination();
 		}
 	}
-	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)
-	{
+	void location_change_cb(const geometry_msgs::msg::PoseStamped &msg)	{
 		if (this->objective_idx >= this->objectives.size()) {
 			// We have finished all scheduled objectives, we don't have to do anything else
 			return;
@@ -152,13 +143,14 @@ public:
 						current_objective = std::get<3>(this->objectives[this->objective_idx]);
 						// initializations for the next stage occur after this switch case, so break
 						break;
-					} else {
+					} 
+					else {
 						return;		// exit since we need to keep traversing
 					}
 				}
 				case OpMode::SEARCH_FOR_GOLD: {
-					if ((msg.pose.position.x > (KSC_EXC_ZONE.tlx + 0.6)) && 
-					(msg.pose.position.y > (KSC_EXC_ZONE.bry + 0.6))) {
+					if ((msg.pose.position.x > (KSC_EXC_ZONE.left + 0.6)) && 
+					(msg.pose.position.y > (KSC_EXC_ZONE.bottom + 0.6))) {
                         auto request = std::make_shared<custom_types::srv::GetDistToObs::Request>();
                         auto response = this->obstacle_distance_service->async_send_request(request);
                         rclcpp::spin_until_future_complete(this->shared_from_this(), response);
@@ -185,19 +177,21 @@ public:
 						}
 						// initializations for the next stage occur after this switch case, so break
 						break;
-					} else {
+					} 
+					else {
 						return;		// exit since we need to keep mining
 					}
 				}
 				case OpMode::OFFLOAD: {
-					// call the offload service
-					auto request = std::make_shared<custom_types::srv::StartOffload::Request>();
-					auto response = this->start_offload_service->async_send_request(request);
-					rclcpp::spin_until_future_complete(this->shared_from_this(), response);		// we don't really care about the return value
-
-					this->objective_idx++;	// on offload finish
-					current_objective = std::get<3>(this->objectives[this->objective_idx]);
-					break;	// init for next stage
+					// this->objective_idx++;	// on offload finish
+					// current_objective = std::get<3>(this->objectives[this->objective_idx]);
+					rclcpp::Time current_time = this->get_clock()->now();
+					if((current_time - time_since_last_op).seconds() >= OFFLOAD_TIME) {	// check that the robot has mined far enough!?
+						this->objective_idx++;
+						current_objective = std::get<3>(this->objectives[this->objective_idx]);
+						break;
+					}
+                    return;
 				}
 				case OpMode::FINISHED: {
 					// send command to disable robot? (or do an emote/hit the griddy)?
@@ -217,7 +211,6 @@ public:
 			}
 			
 			// this block only ever runs if an operation finished and we need to process an initialization for the next stage
-
             time_since_last_op = this->get_clock()->now();
 
             switch(current_objective) {
@@ -231,12 +224,17 @@ public:
 					this->publish_destination();
 					return;
 				}
+				case OpMode::OFFLOAD: {
+					// call the offload service
+					auto request = std::make_shared<custom_types::srv::StartOffload::Request>();
+					auto response = this->start_offload_service->async_send_request(request);
+					rclcpp::spin_until_future_complete(this->shared_from_this(), response);		// we don't really care about the return value
+				}
 				default: {
 					continue;
 				}
 			}
 		}
-
 	}
 
 protected:
@@ -261,8 +259,7 @@ protected:
 };
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	rclcpp::init(argc, argv);
 	auto node = std::make_shared<KingEngineNode>();
 	rclcpp::spin(node);
