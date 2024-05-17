@@ -7,7 +7,7 @@ import psutil
 TOPICS="/cloud_all_fields_fullframe /filtered_imu /filtered_cloud /ImageRight /ImageLeft /ImageCenter"
 ROS_BAG_PROC_INIT = ["ros2", "wtf", "bag", "record", TOPICS, "--compression-mode", "file", "--compression-format", "zstd"]
 
-SECONDS_PER_BAG = 10
+SECONDS_PER_BAG = 270
 OVERLAP_SECONDS = 5
 
 recorders = []
