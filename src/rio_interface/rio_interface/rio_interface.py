@@ -6,7 +6,7 @@ from std_msgs.msg import Bool
 import sys
 
 # from .PiSerialControl.serial_api import serial_api.SerialManager
-from .PiSerialControl import serial_api
+from PiSerialControl import serial_api
 
 class RioInterface(Node):
 

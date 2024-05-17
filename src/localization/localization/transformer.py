@@ -6,10 +6,9 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 import subprocess
-import re
 from threading import Thread
-import time
 import subprocess
+import time
 
 aruco_positions = [
     np.array([[
@@ -17,16 +16,10 @@ aruco_positions = [
         [190, 0, 0],
         [190, 180, 0],
         [10, 180, 0]
-    ]]),
-    np.array([[
-        [0, 0, 190],
-        [0, 0, 10],
-        [0, 180, 10],
-        [0, 180, 190]
-    ]]),
+    ]])
 ]
 
-calibations = {
+calibrations = {
     'YLAF20221208V1': {
         'mtx': np.array([
             [502.77264231,   0.,         322.89582315],
@@ -69,49 +62,9 @@ calibations = {
     }
 }
 
-class Transformer(Node):
-    def __init__(self, init_position, init_orientation):
-        super().__init__('overthruster') # type: ignore
-        self.init_position = init_position
-        self.init_orientation = init_orientation
-        self.subscription = self.create_subscription(
-            PoseStamped,
-            '/dlio/odom_node/pose',
-            self.listener_callback,
-            10
-        )
-        self.publisher_ = self.create_publisher(PoseStamped, '/adjusted_pose', 10)
-
-    def listener_callback(self, msg):
-        position = (np.array([
-            msg.pose.position.x,
-            msg.pose.position.y,
-            msg.pose.position.z
-        ])) # @ self.init_orientation) + self.init_position # type: ignore
-        orientation = Rot.from_matrix(
-            Rot.from_quat([
-                msg.pose.orientation.x,
-                msg.pose.orientation.y,
-                msg.pose.orientation.z,
-                msg.pose.orientation.w
-            ]).as_matrix() # @ self.init_orientation
-        ).as_quat() # type: ignore
-
-        new_msg = PoseStamped()
-
-        new_msg.header = msg.header
-        new_msg.header.stamp = self.get_clock().now().to_msg()
-
-        new_msg.pose.orientation.x = orientation[0]
-        new_msg.pose.orientation.y = orientation[1]
-        new_msg.pose.orientation.z = orientation[2]
-        new_msg.pose.orientation.w = orientation[3]
-        
-        new_msg.pose.position.x = position[0]
-        new_msg.pose.position.y = position[1]
-        new_msg.pose.position.z = position[2]
-
-        self.publisher_.publish(new_msg)
+center_offset = np.array(
+    [.55, 0, 0]
+)
 
 class ArucoEstimator():
     def get_camera_info(self):
@@ -141,34 +94,28 @@ class ArucoEstimator():
     
     def camera_thead(self, serial: str, camera: str):
         try:
-            rclpy.logging.get_logger("aruco").info("opening camera")
+            # open camera and retieve calibrations
             cap = cv2.VideoCapture(camera)
-            
-            rclpy.logging.get_logger("aruco").info("setting params")
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             cap.set(cv2.CAP_PROP_FPS, 60)
-
-            rclpy.logging.get_logger("aruco").info("dictionary")
             detector = cv2.aruco.ArucoDetector(
                 cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50),
                 cv2.aruco.DetectorParameters()
             )
+            mtx = calibrations[serial]['mtx']
+            dist = calibrations[serial]['dist']
 
-            rclpy.logging.get_logger("aruco").info("reading calibration")
-            mtx = calibations[serial]['mtx']
-            dist = calibations[serial]['dist']
-
+            # read frames until aruco detected
             while self.init_position is None:
                 _, frame = cap.read()
                 
-                corners, ids, rejected = detector.detectMarkers(frame)
-                if corners == ():
-                    continue
-                flat_corners = ids.flatten().tolist()
-                if flat_corners == []:
+                corners, ids, _ = detector.detectMarkers(frame)
+                flat_ids = ids.flatten().tolist()
+                if corners == () or flat_ids != [0]:
                     continue
 
+                # if aruco with ID 0 is detected, estimate pose with solvePnP
                 img_points = []
                 real_points = []
 
@@ -176,14 +123,13 @@ class ArucoEstimator():
                     for i in range(0, 4):
                         img_points.append(corners[0][0][i])
                         real_points.append(aruco_positions[0][0][i])
-
-                print(img_points)
-
+                
                 real_points = np.array(real_points).astype(np.float32)
                 img_points = np.array(img_points).astype(np.float32)
 
                 _, rvec, tvec = cv2.solvePnP(real_points, img_points, mtx, dist)
 
+                # transpose to world frame for camera pose relative to tag
                 Rt = cv2.Rodrigues(rvec)[0]
                 R = Rt.transpose()
 
@@ -191,20 +137,19 @@ class ArucoEstimator():
                 totalrotmax = np.array([[ZYX[0, 0], ZYX[0, 1], ZYX[0, 2], tvec[0][0]], [ZYX[1, 0], ZYX[1, 1], ZYX[1, 2], tvec[1][0]], [ZYX[2, 0], ZYX[2, 1], ZYX[2, 2], tvec[2][0]], [0, 0, 0, 1]])
                 inverserotmax = np.linalg.inv(totalrotmax)
 
+                # match coordinate frame to dlio
                 pitch = float(math.atan2(-R[2][1], R[2][2]))
                 yaw = math.asin(R[2][0])
                 roll = math.atan2(-R[1][0], R[0][0])
-                x = inverserotmax[0][3]
-                y = inverserotmax[1][3]
-                z = inverserotmax[2][3]
+                x = inverserotmax[2][3]
+                y = inverserotmax[0][3]
+                z = inverserotmax[1][3]
                 cap.release()
 
-                self.init_orientation = Rot.from_euler('xyz', (roll, pitch, yaw), degrees=True).as_matrix() @ calibations[serial]['rot']
-                self.init_position = np.array([x, y, z]) @ calibations[serial]['rot'] + calibations[serial]['pos']
+                self.init_orientation = Rot.from_euler('xyz', (roll, pitch, yaw), degrees=True).as_matrix() @ calibrations[serial]['rot']
+                self.init_position = np.array([x, y, z]) @ calibrations[serial]['rot'] + calibrations[serial]['pos']
         except Exception as e:
-            rclpy.logging.get_logger("aruco").error(str(e))
-            cv2.destroyAllWindows()
-            
+            rclpy.logging.get_logger("aruco").error(str(e))            
 
     def sined(self) -> bool:
         return self.init_orientation is not None
@@ -215,28 +160,65 @@ class ArucoEstimator():
     def kill(self):
         self.init_position = 'die'
 
+class Transformer(Node):
+    def __init__(self, init_position, init_orientation):
+        super().__init__('overthruster') # type: ignore
+        self.init_position = init_position
+        self.init_orientation = init_orientation
+        self.subscription = self.create_subscription(
+            PoseStamped,
+            '/dlio/odom_node/pose',
+            self.listener_callback,
+            10
+        )
+        self.publisher_ = self.create_publisher(PoseStamped, '/adjusted_pose', 10)
+
+    def listener_callback(self, msg):
+        position = ((np.array([
+            msg.pose.position.x,
+            msg.pose.position.y,
+            msg.pose.position.z
+        ])) @ self.init_orientation) + self.init_position # type: ignore
+        orientation = Rot.from_matrix(
+            Rot.from_quat([
+                msg.pose.orientation.x,
+                msg.pose.orientation.y,
+                msg.pose.orientation.z,
+                msg.pose.orientation.w
+            ]).as_matrix() @ self.init_orientation
+        ).as_quat() # type: ignore
+
+        # map to center of robor
+        position = position +  np.linalg.inv(orientation)
+
+        # publish to topic
+        new_msg = PoseStamped()
+        new_msg.header = msg.header
+        new_msg.header.stamp = self.get_clock().now().to_msg()
+        new_msg.pose.orientation.x = orientation[0]
+        new_msg.pose.orientation.y = orientation[1]
+        new_msg.pose.orientation.z = orientation[2]
+        new_msg.pose.orientation.w = orientation[3]
+        new_msg.pose.position.x = position[0]
+        new_msg.pose.position.y = position[1]
+        new_msg.pose.position.z = position[2]
+
+        self.publisher_.publish(new_msg)
+
 
 def main():
-    rclpy.logging.get_logger("aruco").info("aruco time!")
+    rclpy.logging.get_logger("aruco").info("INITIALIZING")
 
     # SINED: get initial pose using transformed aruco vals
-    # est = ArucoEstimator()
-    # try:
-    #     while not est.sined():
-    #         time.sleep(.1)
-    # except KeyboardInterrupt:
-    #     est.kill()
-    #     exit()
-    # position, orientation = est.get_init()
-    # # position = (position @ center_angle) + center_offset
-    # # orientation = orientation @ center_angle
+    est = ArucoEstimator()
+    try:
+        while not est.sined():
+            time.sleep(.1)
+    except KeyboardInterrupt:
+        est.kill()
+        exit()
+    init_position, init_orientation = est.get_init()
     rclpy.logging.get_logger("aruco").info("SINED")
-    position = np.array([[0, 0, 0]])
-    orientation = np.array([
-        [1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 1]
-    ])
 
     # SEELED: start DLIO
     try:
@@ -245,16 +227,19 @@ def main():
             shell=True,
             executable="/bin/bash"
         )
+        time.sleep(3)
         rclpy.logging.get_logger("aruco").info("SEELED")
 
-    # DELIVERED: start pose transformation node
+        # DELIVERED: start pose transformation node
         rclpy.init()
-        minimal_subscriber = Transformer(position, orientation)
+        minimal_subscriber = Transformer(init_position, init_orientation)
         rclpy.spin(minimal_subscriber)
         rclpy.logging.get_logger("aruco").info("DELIVERED")
         minimal_subscriber.destroy_node()
         rclpy.shutdown()
     except KeyboardInterrupt:
+        subprocess.run(['kill', '-9 ', str(dlio.pid)])
+    except:
         subprocess.run(['kill', '-9 ', str(dlio.pid)])
 
 if __name__ == '__main__':
