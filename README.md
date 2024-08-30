@@ -14,6 +14,9 @@ It contains ros code for each subsystem to communicate.
 # Ros2 Humble Installation instructions
 see [https://docs.ros.org/en/humble/Installation.html](https://docs.ros.org/en/humble/index.html)
 
+# Requirements:
+* Install PCL `sudo apt-get install libpcl-dev`
+
 # Build Instructions:
 * `git clone https://github.com/Cardinal-Space-Mining/KingEngine.git --recurse-submodules`
 * `cd ./KingEngine`
